@@ -33,7 +33,7 @@ FEEDS = [
     },
     {
         "name": "The Cut",
-        "url": "https://feeds.feedburner.com/nymag/thecut",
+        "url": "https://thecut.com/feed/rss.xml",
         "color": "#FF6B6B"
     },
     {
