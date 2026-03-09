@@ -31,11 +31,16 @@ FEEDS = [
        "url": "https://rss.nytimes.com/services/xml/rss/nyt/Magazine.xml",
        "color": "#FF3A2F"
    },
-    {
-        "name": "The Cut",
-        "url": "https://thecut.com/feed/rss.xml",
-        "color": "#FF6B6B"
-    },
+  {
+       "name": "n+1",
+       "url": "https://www.nplusonemag.com/feed/",
+       "color": "#FF6B6B"
+   },
+   {
+       "name": "Reason",
+       "url": "https://reason.com/feed/",
+       "color": "#003366"
+   },
     {
         "name": "Intelligencer",
         "url": "https://feeds.feedburner.com/nymag/intelligencer",
