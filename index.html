@@ -4,17 +4,2131 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Headlines Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
     <style>
-        body { background: #0d0d0d; color: #888; font-family: 'IBM Plex Mono', monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
-        h1 { font-family: 'Playfair Display', serif; color: #e8e6e1; font-size: 2rem; margin-bottom: 16px; }
-        p { font-size: 0.8rem; line-height: 1.8; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d0d0d;
+            --surface: #161616;
+            --surface2: #1e1e1e;
+            --border: #2a2a2a;
+            --text: #e8e6e1;
+            --text-muted: #888;
+            --text-dim: #555;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-weight: 300;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            border-bottom: 1px solid var(--border);
+            padding: 24px 24px 0;
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 100;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .masthead {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.4rem, 4vw, 2rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+
+        .masthead span {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .dateline {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .stats-bar {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 2px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tabs::-webkit-scrollbar { display: none; }
+
+        .tab {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 400;
+            padding: 10px 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            transition: color 0.15s, border-color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab:hover { color: var(--text); }
+
+        .tab.active {
+            color: var(--text);
+            border-bottom-color: var(--accent);
+            font-weight: 500;
+        }
+
+        .tab .count {
+            background: var(--surface2);
+            border-radius: 10px;
+            font-size: 0.68rem;
+            padding: 1px 6px;
+            color: var(--text-dim);
+        }
+
+        .tab.active .count {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* ── Main Content ── */
+        main {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        /* ── Publication Section ── */
+        .pub-header {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+            padding: 28px 0 16px;
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+        }
+
+        .pub-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .article-count {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: 'IBM Plex Mono', monospace;
+            letter-spacing: 0.03em;
+        }
+
+        /* ── Headline Cards ── */
+        .headline-card {
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .meta {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .headline-link {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1rem, 2.5vw, 1.15rem);
+            font-weight: 400;
+            line-height: 1.4;
+            color: var(--text);
+            text-decoration: none;
+            display: block;
+            transition: color 0.15s;
+        }
+
+        .headline-link:hover {
+            color: var(--accent, #aaa);
+        }
+
+        .summary {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 6px;
+            font-weight: 300;
+        }
+
+        .empty {
+            color: var(--text-dim);
+            font-style: italic;
+            padding: 32px 0;
+            font-size: 0.9rem;
+        }
+
+        /* ── Search ── */
+        .search-wrap {
+            padding: 20px 0 0;
+        }
+
+        #search {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.9rem;
+            padding: 10px 14px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        #search:focus { border-color: #555; }
+        #search::placeholder { color: var(--text-dim); }
+
+        /* ── Footer ── */
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            font-family: 'IBM Plex Mono', monospace;
+            letter-spacing: 0.04em;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 600px) {
+            header { padding: 16px 16px 0; }
+            main { padding: 0 16px 60px; }
+            .tab { padding: 10px 10px; font-size: 0.75rem; }
+        }
     </style>
 </head>
 <body>
-    <div>
-        <h1>Headlines Dashboard</h1>
-        <p>Dashboard is being set up.<br>It will populate automatically on first run.</p>
-    </div>
+    <header>
+        <div class="header-top">
+            <div class="masthead">Headlines <span>/ Daily</span></div>
+            <div class="dateline">Monday, March 09, 2026 — 08:06 PM</div>
+        </div>
+        <div class="stats-bar">250 stories across 8 publications · rolling 7 days</div>
+        <div class="tabs">
+            <button class="tab active" data-target="pub-0" style="--accent:#C8102E">The Atlantic <span class="count">25</span></button>
+<button class="tab " data-target="pub-1" style="--accent:#E3120B">The Economist <span class="count">122</span></button>
+<button class="tab " data-target="pub-2" style="--accent:#000000">New York Times <span class="count">23</span></button>
+<button class="tab " data-target="pub-3" style="--accent:#D4001A">The New Yorker <span class="count">50</span></button>
+<button class="tab " data-target="pub-4" style="--accent:#FF3A2F">New York Magazine <span class="count">0</span></button>
+<button class="tab " data-target="pub-5" style="--accent:#FF6B6B">The Cut <span class="count">0</span></button>
+<button class="tab " data-target="pub-6" style="--accent:#0057A8">Intelligencer <span class="count">20</span></button>
+<button class="tab " data-target="pub-7" style="--accent:#FFDB00">Vox <span class="count">10</span></button>
+
+        </div>
+    </header>
+
+    <main>
+        <div class="search-wrap">
+            <input type="search" id="search" placeholder="Search headlines…" autocomplete="off">
+        </div>
+        
+        <section class="pub-section" id="pub-0" style="display:block">
+            <div class="pub-header" style="--accent:#C8102E">
+                <h2>The Atlantic</h2>
+                <span class="article-count">25 stories · last 7 days</span>
+            </div>
+            <div class="articles">
+                
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:03 PM</div>
+                    <a href="https://www.theatlantic.com/photography/2026/03/winter-paralympics-photo-day-sled-hockey/686300/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Winter Paralympics Photo of the Day: Sled Hockey
+                    </a>
+                    <p class="summary">A para ice-hockey player maneuvers with the puck.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 06:07 PM</div>
+                    <a href="https://www.theatlantic.com/ideas/2026/03/gavin-newsom-israel-policy/686299/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        I Believe California Has a Right to Exist
+                    </a>
+                    <p class="summary">Gavin Newsom also has a right to exist.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 05:08 PM</div>
+                    <a href="https://www.theatlantic.com/culture/2026/03/love-story-john-kennedy-carolyn-bessette-ryan-murphy/686298/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        <em>Love Story </em>Is a Horror Story
+                    </a>
+                    <p class="summary">The show, which deeply empathizes with John F. Kennedy Jr. and Carolyn Bessette, is ultimately just a paparazzo by other means.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 05:02 PM</div>
+                    <a href="https://www.theatlantic.com/national/2026/03/dating-app-nightmare/686280/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        A Dating-App Nightmare
+                    </a>
+                    <p class="summary">Millions of Americans connect online, but do they know who is receiving their messages?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 03:31 PM</div>
+                    <a href="https://www.theatlantic.com/national-security/2026/03/us-civilian-casualties-iran/686292/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        The Pentagon Cut Its Civilian Safeguards Before the Iran War
+                    </a>
+                    <p class="summary">As the civilian toll in Iran mounts, some officials point to the impact of Pete Hegseth’s hostility to battlefield restraint.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 03:00 PM</div>
+                    <a href="https://www.theatlantic.com/health/2026/03/acetaminophen-autism-adhd-taiwan/686297/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        The Fight Over Tylenol and Autism Just Got Messier
+                    </a>
+                    <p class="summary">Researchers in Taiwan tried to examine whether using acetaminophen during pregnancy leaves children at greater risk of neurological disorders. The results ar…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 01:31 PM</div>
+                    <a href="https://www.theatlantic.com/national-security/2026/03/air-campaign-military-primer/686294/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        An Air-Campaign Primer
+                    </a>
+                    <p class="summary">The United States has seldom waged the sort of campaign now under way in Iran.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 01:01 PM</div>
+                    <a href="https://www.theatlantic.com/books/2026/03/how-christian-nationalist-became-epithet/686279/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Americans Should Stop Using the Term <em>Christian Nationalism</em>
+                    </a>
+                    <p class="summary">Religious beliefs have driven political change for centuries. The question today is which Christian values will prevail.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 12:00 PM</div>
+                    <a href="https://www.theatlantic.com/ideas/2026/03/slow-reading-books-benefits/686266/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Andrew Tate Doesn’t Get the Point of Books
+                    </a>
+                    <p class="summary">The erosion of deep reading weakens our capacity to grasp complex ideas.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 11:31 AM</div>
+                    <a href="https://www.theatlantic.com/ideas/2026/03/cynical-gullible-american-man/686079/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Gullible, Cynical America
+                    </a>
+                    <p class="summary">The trouble with believing anything and nothing at the same time</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 11:00 AM</div>
+                    <a href="https://www.theatlantic.com/national-security/2026/03/asymmetric-warfare-iran-numbers-stations-cyber/686289/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        A Mysterious Code Is Being Broadcast on Shortwave Radio. Is It Iran?
+                    </a>
+                    <p class="summary">The regime is overmatched militarily, but still has tools for returning fire.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 11:00 AM</div>
+                    <a href="https://www.theatlantic.com/ideas/2026/03/mamdani-homeownership/686269/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        The Left Shouldn’t Demonize Homeowners
+                    </a>
+                    <p class="summary">Zohran Mamdani’s DSA allies malign homeownership. But in New York City, it has changed lives and transformed neighborhoods.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 11:00 AM</div>
+                    <a href="https://www.theatlantic.com/magazine/2026/04/signalgate-consequences-national-security/686056/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        The Pete Hegseth Exception
+                    </a>
+                    <p class="summary">Nearly a year after a national-security scandal erupted on my iPhone, no one in the Trump administration has faced consequences.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 06:27 PM</div>
+                    <a href="https://www.theatlantic.com/photography/2026/03/winter-paralympics-photo-day-para-biathlon/686293/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Winter Paralympics Photo of the Day: Para Biathlon
+                    </a>
+                    <p class="summary">A seated skier tucks low, picking up speed.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 04:57 PM</div>
+                    <a href="https://www.theatlantic.com/culture/2026/03/snl-ryan-gosling-season-51/686291/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        The <em>SNL</em> Sketch That Broke All the Rules
+                    </a>
+                    <p class="summary">Last night, the show made the host, Ryan Gosling, break character—on purpose.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 04:00 PM</div>
+                    <a href="https://www.theatlantic.com/magazine/2026/04/robert-pinsky-misrule-music/686069/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Misrule Music
+                    </a>
+                    <p class="summary">A poem</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 12:00 PM</div>
+                    <a href="https://www.theatlantic.com/ideas/2026/03/body-mind-self-material-philosophy/686176/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        The Mind-Body Question
+                    </a>
+                    <p class="summary">Are we all material—tissues and veins—or is there some nonmaterial substance, some essence, that transcends the corporeal form?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 11:00 AM</div>
+                    <a href="https://www.theatlantic.com/newsletters/2026/03/six-bizarre-movies-that-are-actually-fun-to-watch/686281/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Six Bizarre Movies That Are Actually Fun to Watch
+                    </a>
+                    <p class="summary">Weird wins you over in these films.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 11:00 AM</div>
+                    <a href="https://www.theatlantic.com/culture/2026/03/hollywood-movie-stars-directors-auteurs-ryan-coogler/686268/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Hollywood’s Star Power Is Shifting
+                    </a>
+                    <p class="summary">Auteur filmmakers have become as much of a selling point as the actors they work with.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:00 AM</div>
+                    <a href="https://www.theatlantic.com/ideas/2026/03/us-conflict-society-unity/686274/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        A Word for Our Troubled Times
+                    </a>
+                    <p class="summary">Too many people are living fragmented lives.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 07:56 PM</div>
+                    <a href="https://www.theatlantic.com/photography/2026/03/winter-paralympics-photo-day-flying-downhill/686288/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Winter Paralympics Photo of the Day: Flying Downhill
+                    </a>
+                    <p class="summary">A para Alpine skier catches some air during a fast downhill run.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 06:34 PM</div>
+                    <a href="https://www.theatlantic.com/technology/2026/03/polymarket-insider-trading-going-get-people-killed/686283/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Insider Trading Is Going to Get People Killed
+                    </a>
+                    <p class="summary">War markets are a national-security threat.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 06:18 PM</div>
+                    <a href="https://www.theatlantic.com/national/2026/03/trump-objectives-iran-washington-week/686287/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        What Are the Trump Administration’s Objectives in Iran?
+                    </a>
+                    <p class="summary">Panelists on Washington Week With The Atlantic joined to discuss the potential motivation behind Trump’s actions against Iran, and more.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 04:13 PM</div>
+                    <a href="https://www.theatlantic.com/newsletters/2026/03/boredom-attention-meaning/686286/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        An Uncomfortable Emotion That’s Worth Feeling
+                    </a>
+                    <p class="summary">Boredom is inextricable from a meaningful life.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 01:00 PM</div>
+                    <a href="https://www.theatlantic.com/ideas/2026/03/anthropic-pentagon-contract-openai/686285/?utm_source=feed" target="_blank" rel="noopener" class="headline-link">
+                        Anthropic’s Ethical Stand Could Be Paying Off
+                    </a>
+                    <p class="summary">The AI company gave up a $200 million contract—and might be getting something more valuable in return.</p>
+                </article>
+            </div>
+        </section>
+        <section class="pub-section" id="pub-1" style="display:none">
+            <div class="pub-header" style="--accent:#E3120B">
+                <h2>The Economist</h2>
+                <span class="article-count">122 stories · last 7 days</span>
+            </div>
+            <div class="articles">
+                
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 05:33 PM</div>
+                    <a href="https://www.economist.com/business/2026/03/09/chinas-ai-giants-are-handing-out-cash-to-lure-in-users" target="_blank" rel="noopener" class="headline-link">
+                        China’s AI giants are handing out cash to lure in users
+                    </a>
+                    <p class="summary">How long can their ferocious rivalry last?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 04:39 PM</div>
+                    <a href="https://www.economist.com/china/2026/03/09/there-are-56-ethnicities-in-china-and-55-are-getting-squashed" target="_blank" rel="noopener" class="headline-link">
+                        There are 56 ethnicities in China—and 55 are getting squashed
+                    </a>
+                    <p class="summary">China wants its minorities decorative, but not distinct</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 03:13 PM</div>
+                    <a href="https://www.economist.com/britain/2026/03/09/shared-interests-are-binding-britain-and-norway-together" target="_blank" rel="noopener" class="headline-link">
+                        Shared interests are binding Britain and Norway together
+                    </a>
+                    <p class="summary">Defence and energy are the main pillars of a strengthening partnership</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 12:30 PM</div>
+                    <a href="https://www.economist.com/in-brief/2026/03/09/the-us-in-brief-the-price-of-peace" target="_blank" rel="noopener" class="headline-link">
+                        The US in brief: The price of peace
+                    </a>
+                    <p class="summary">Our daily political update, featuring the stories that matter</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:52 AM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/09/follow-the-leader-iran-picks-the-son" target="_blank" rel="noopener" class="headline-link">
+                        Follow the leader: Iran picks the son
+                    </a>
+                    <p class="summary">Also on the daily podcast: American science is suffering and Britain’s tenor shortage</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 09:00 AM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/09/donald-trumps-ill-considered-war" target="_blank" rel="noopener" class="headline-link">
+                        Donald Trump’s ill-considered war
+                    </a>
+                    <p class="summary">A handpicked article read aloud from the latest issue of The Economist</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 11:53 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/08/irans-defiant-regime-picks-a-new-supreme-leader" target="_blank" rel="noopener" class="headline-link">
+                        Iran’s defiant regime picks a new supreme leader
+                    </a>
+                    <p class="summary">The appointment suggests the Revolutionary Guards have the upper hand</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 09:32 PM</div>
+                    <a href="https://www.economist.com/europe/2026/03/08/germanys-greens-have-come-back-to-win-in-baden-wurttemberg" target="_blank" rel="noopener" class="headline-link">
+                        Germany’s Greens have come back to win in Baden-Württemberg
+                    </a>
+                    <p class="summary">The defeat of the Christian Democrats is a poor sign for Friedrich Merz</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 07:21 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/08/what-a-second-week-of-war-will-bring" target="_blank" rel="noopener" class="headline-link">
+                        What a second week of war will bring
+                    </a>
+                    <p class="summary">The conflict is turning into a test of will between Iran and its adversaries</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 05:52 PM</div>
+                    <a href="https://www.economist.com/britain/2026/03/08/a-landmark-anti-slavery-case-adds-suppliers-to-british-firms-risks" target="_blank" rel="noopener" class="headline-link">
+                        A landmark anti-slavery case adds suppliers to British firms’ risks
+                    </a>
+                    <p class="summary">The dust settles in a Dyson dispute</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 05:48 PM</div>
+                    <a href="https://www.economist.com/finance-and-economics/2026/03/08/the-iran-war-puts-asia-in-an-energy-panic" target="_blank" rel="noopener" class="headline-link">
+                        The Iran war puts Asia in an energy panic
+                    </a>
+                    <p class="summary">Stranded Gulf supplies are choking off the region’s economies</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 05:38 PM</div>
+                    <a href="https://www.economist.com/united-states/2026/03/08/why-maga-backs-donald-trumps-war-for-now" target="_blank" rel="noopener" class="headline-link">
+                        Why MAGA backs Donald Trump’s war—for now
+                    </a>
+                    <p class="summary">If the conflict in Iran drags on, will his America First base stick with him?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 12:36 PM</div>
+                    <a href="https://www.economist.com/finance-and-economics/2026/03/08/would-america-be-in-recession-without-the-super-rich" target="_blank" rel="noopener" class="headline-link">
+                        Would America be in recession without the super-rich?
+                    </a>
+                    <p class="summary">American anxieties are K-shaped. The economy is more like a backslash</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:43 AM</div>
+                    <a href="https://www.economist.com/asia/2026/03/08/is-india-the-fourth-or-fifth-biggest-economy-it-does-not-matter" target="_blank" rel="noopener" class="headline-link">
+                        Is India the fourth- or fifth-biggest economy? It does not matter
+                    </a>
+                    <p class="summary">Politicians boasting about India’s economic prowess are laying a trap for themselves</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 08:35 AM</div>
+                    <a href="https://www.economist.com/culture/2026/03/08/the-best-new-novels-to-read-this-spring" target="_blank" rel="noopener" class="headline-link">
+                        The best new novels to read this spring
+                    </a>
+                    <p class="summary">Tales of lust, betrayal, greed and violence</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 08:27 AM</div>
+                    <a href="https://www.economist.com/britain/2026/03/08/ten-years-after-the-eu-referendum-britain-has-become-more-european" target="_blank" rel="noopener" class="headline-link">
+                        Ten years after the EU referendum, Britain has become more European
+                    </a>
+                    <p class="summary">A nation of caffeinated populists</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 07:32 PM</div>
+                    <a href="https://www.economist.com/europe/2026/03/07/the-iran-war-puts-vladimir-putin-in-a-tough-spot" target="_blank" rel="noopener" class="headline-link">
+                        The Iran war puts Vladimir Putin in a tough spot
+                    </a>
+                    <p class="summary">Higher oil prices are poor compensation for showing Russia’s weakness</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 10:30 AM</div>
+                    <a href="https://www.economist.com/united-states/2026/03/07/checks-and-balance-pete-hegseth-and-the-risks-of-a-macho-military" target="_blank" rel="noopener" class="headline-link">
+                        Checks and Balance: Pete Hegseth and the risks of a macho military
+                    </a>
+                    <p class="summary">Charlotte Howard, our New York bureau chief, on why divisive machismo is at the core of the Trump administration’s military policy</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 09:30 AM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/07/the-last-whales-at-marineland" target="_blank" rel="noopener" class="headline-link">
+                        The last whales at Marineland
+                    </a>
+                    <p class="summary">A sea-life theme park closed. Its animals got stuck inside</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 09:11 PM</div>
+                    <a href="https://www.economist.com/interactive/middle-east-and-africa/2026/03/06/the-iran-war-has-entered-a-new-phase" target="_blank" rel="noopener" class="headline-link">
+                        The Iran war has entered a new phase
+                    </a>
+                    <p class="summary">Both sides have changed their tactics, our data analysis finds</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 07:55 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/06/israel-sees-a-chance-to-destroy-hizbullah-at-last" target="_blank" rel="noopener" class="headline-link">
+                        Israel sees a chance to destroy Hizbullah at last
+                    </a>
+                    <p class="summary">Iran’s most powerful proxy, though weakened, is still in the fight</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 07:44 PM</div>
+                    <a href="https://www.economist.com/international/2026/03/06/can-ukraine-help-defeat-irans-drone-swarms" target="_blank" rel="noopener" class="headline-link">
+                        Can Ukraine help defeat Iran’s drone swarms?
+                    </a>
+                    <p class="summary">Thousands of Shaheds are raining down on the Gulf</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 06:03 PM</div>
+                    <a href="https://www.economist.com/the-world-this-week/2026/03/06/cover-story-newsletter-a-war-without-a-strategy" target="_blank" rel="noopener" class="headline-link">
+                        Cover Story newsletter: A war without a strategy
+                    </a>
+                    <p class="summary">An exclusive look at how we designed this week’s cover</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 05:26 PM</div>
+                    <a href="https://www.economist.com/science-and-technology/2026/03/06/what-is-your-maximum-heart-rate" target="_blank" rel="noopener" class="headline-link">
+                        What is your maximum heart rate?
+                    </a>
+                    <p class="summary">We tell you how to find out</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 04:08 PM</div>
+                    <a href="https://www.economist.com/by-invitation/2026/03/06/what-people-get-wrong-about-womens-rights" target="_blank" rel="noopener" class="headline-link">
+                        What people get wrong about women’s rights
+                    </a>
+                    <p class="summary">Elites should stop assuming that the barriers to progress are the same from Brazil to Bangladesh, writes Alice Evans</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 04:04 PM</div>
+                    <a href="https://www.economist.com/culture/2026/03/06/six-books-to-understand-the-gilded-age" target="_blank" rel="noopener" class="headline-link">
+                        Six books to understand the Gilded Age
+                    </a>
+                    <p class="summary">Stories about the ultra-rich—and the ultra-poor</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 03:07 PM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/06/does-america-have-a-strategy-in-iran" target="_blank" rel="noopener" class="headline-link">
+                        Does America have a strategy in Iran?
+                    </a>
+                    <p class="summary">Our weekly podcast on democracy in America. This week, we consider what would be a good outcome to the war</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 02:50 PM</div>
+                    <a href="https://www.economist.com/culture/2026/03/06/what-to-watch-this-week" target="_blank" rel="noopener" class="headline-link">
+                        What to watch this week
+                    </a>
+                    <p class="summary">Beavers, bestselling authors and Peaky Blinders make our list of recommendations this week</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 01:26 PM</div>
+                    <a href="https://www.economist.com/culture/2026/03/06/an-oscar-nominated-documentary-goes-behind-enemy-lines" target="_blank" rel="noopener" class="headline-link">
+                        An Oscar-nominated documentary goes behind enemy lines
+                    </a>
+                    <p class="summary">“Mr Nobody Against Putin” takes on patriotism, propaganda and the limits of sympathy</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 12:00 PM</div>
+                    <a href="https://www.economist.com/in-brief/2026/03/06/the-us-in-brief-a-forced-removal" target="_blank" rel="noopener" class="headline-link">
+                        The US in Brief: A forced removal
+                    </a>
+                    <p class="summary">Our daily political update, featuring the stories that matter</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 11:55 AM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/06/the-third-gulf-war-one-week-on" target="_blank" rel="noopener" class="headline-link">
+                        The third Gulf war: one week on
+                    </a>
+                    <p class="summary">Also on the daily podcast: Missile interceptors and Ali Khamenei obit</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 11:29 AM</div>
+                    <a href="https://www.economist.com/by-invitation/2026/03/06/pedro-sanchez-no-to-war" target="_blank" rel="noopener" class="headline-link">
+                        Pedro Sánchez: No to war
+                    </a>
+                    <p class="summary">It is naive to think that escalating conflict in Iran will lead to anything good, writes Spain’s prime minister</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 09:28 AM</div>
+                    <a href="https://www.economist.com/1843/2026/03/06/my-road-trip-with-the-do-gooding-cactus-smugglers" target="_blank" rel="noopener" class="headline-link">
+                        My road trip with the do-gooding cactus smugglers
+                    </a>
+                    <p class="summary">Can poaching ever be ethical?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 02:28 AM</div>
+                    <a href="https://www.economist.com/business/2026/03/06/anthropics-boss-apologises-for-bashing-pentagon-but-still-plans-to-sue" target="_blank" rel="noopener" class="headline-link">
+                        Anthropic’s boss apologises for bashing Pentagon—but still plans to sue
+                    </a>
+                    <p class="summary">The AI lab is the first American firm to be labelled a supply-chain risk</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:18 PM</div>
+                    <a href="https://www.economist.com/united-states/2026/03/05/kristi-noems-ignoble-legacy-as-homeland-security-secretary" target="_blank" rel="noopener" class="headline-link">
+                        Kristi Noem’s ignoble legacy as homeland security secretary
+                    </a>
+                    <p class="summary">She will not be remembered fondly by Americans or her workforce</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 10:01 PM</div>
+                    <a href="https://www.economist.com/science-and-technology/2026/03/05/faecal-transplants-a-treatment-for-bipolar-disorder" target="_blank" rel="noopener" class="headline-link">
+                        Faecal transplants—a treatment for bipolar disorder?
+                    </a>
+                    <p class="summary">Initial results from a test are intriguing</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 03:41 PM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/05/the-iran-war-could-rock-the-global-economy" target="_blank" rel="noopener" class="headline-link">
+                        The Iran war could rock the global economy
+                    </a>
+                    <p class="summary">Our podcast on markets, the economy and business. This week, the situation long feared by oil-watchers has become a reality</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 02:42 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/05/israel-and-america-want-the-kurds-to-join-the-fight-in-iran" target="_blank" rel="noopener" class="headline-link">
+                        Israel and America want the Kurds to join the fight in Iran
+                    </a>
+                    <p class="summary">Kurdish militias are weighing a risky bid to redraw their neighbour’s borders</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/economic-and-financial-indicators/2026/03/05/economic-data-commodities-and-markets" target="_blank" rel="noopener" class="headline-link">
+                        Economic data, commodities and markets
+                    </a>
+                    
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/culture/2026/03/05/triumph-of-the-toons-how-animation-came-to-rule-the-box-office" target="_blank" rel="noopener" class="headline-link">
+                        Triumph of the toons: how animation came to rule the box office
+                    </a>
+                    <p class="summary">This may be the genre’s most successful year yet</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/culture/2026/03/05/six-books-to-read-about-iran" target="_blank" rel="noopener" class="headline-link">
+                        Six books to read about Iran
+                    </a>
+                    <p class="summary">Histories, memoirs and reportage that offer an insight into the Islamic Republic</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/culture/2026/03/05/who-wants-a-partner-to-toady-to-them-quite-a-lot-of-people" target="_blank" rel="noopener" class="headline-link">
+                        Who wants a partner to toady to them? Quite a lot of people
+                    </a>
+                    <p class="summary">Sycophantic AI is changing the world of romance and dating</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/business/2026/03/05/formula-one-is-attracting-a-different-sort-of-fan" target="_blank" rel="noopener" class="headline-link">
+                        Formula One is attracting a different sort of fan
+                    </a>
+                    <p class="summary">Lifestyle as much as motor racing is drawing in newcomers</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/business/2026/03/05/a-short-guide-to-email-opening-lines" target="_blank" rel="noopener" class="headline-link">
+                        A short guide to email opening lines
+                    </a>
+                    <p class="summary">“I hope you are well” and other classics</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/business/2026/03/05/bayer-spies-an-end-to-a-long-legal-battle" target="_blank" rel="noopener" class="headline-link">
+                        Bayer spies an end to a long legal battle
+                    </a>
+                    <p class="summary">After a settlement over Roundup, what about break-up?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/china/2026/03/05/china-sets-its-lowest-growth-target-for-a-generation" target="_blank" rel="noopener" class="headline-link">
+                        China sets its lowest growth target for a generation
+                    </a>
+                    <p class="summary">In macroeconomics, modesty is not always a virtue</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/china/2026/03/05/chinas-first-railway-project-in-the-eu-is-open-at-last" target="_blank" rel="noopener" class="headline-link">
+                        China’s first railway project in the EU is open at last
+                    </a>
+                    <p class="summary">Once a show of largesse, it now reflects China’s struggles on the continent</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/asia/2026/03/05/allegations-against-a-corruption-watchdog-rock-malaysian-politics" target="_blank" rel="noopener" class="headline-link">
+                        Allegations against a corruption watchdog rock Malaysian politics
+                    </a>
+                    <p class="summary">The prime minister, Anwar Ibrahim, repeats his predecessors’ answer</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/asia/2026/03/05/welcome-to-kashiwazaki-home-to-the-worlds-largest-nuclear-plant" target="_blank" rel="noopener" class="headline-link">
+                        Welcome to Kashiwazaki, home to the world’s largest nuclear plant
+                    </a>
+                    <p class="summary">What one small city says about modern Japan’s development</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/the-americas/2026/03/05/javier-milei-aggressively-celebrates-a-string-of-successes" target="_blank" rel="noopener" class="headline-link">
+                        Javier Milei aggressively celebrates a string of successes
+                    </a>
+                    <p class="summary">Argentina’s president has much to shout about. But job worries loom</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/05/in-african-development-big-is-beautiful-again" target="_blank" rel="noopener" class="headline-link">
+                        In African development, big is beautiful again
+                    </a>
+                    <p class="summary">With aid declining, grand visions for growth are back in fashion</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/05/thousands-of-africans-are-fighting-for-russia-in-ukraine" target="_blank" rel="noopener" class="headline-link">
+                        Thousands of Africans are fighting for Russia in Ukraine
+                    </a>
+                    <p class="summary">African governments are belatedly trying to stop them</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/united-states/2026/03/05/states-are-embracing-the-maha-food-agenda" target="_blank" rel="noopener" class="headline-link">
+                        States are embracing the MAHA food agenda
+                    </a>
+                    <p class="summary">Robert F. Kennedy junior and company have built a powerful coalition</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/europe/2026/03/05/how-the-danes-and-swedes-handle-populism" target="_blank" rel="noopener" class="headline-link">
+                        How the Danes and Swedes handle populism
+                    </a>
+                    <p class="summary">Denmark’s Mette Frederiksen calls an election to take on the hard right again</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/europe/2026/03/05/meet-the-weekend-warriors-preparing-to-defend-europe-from-russia" target="_blank" rel="noopener" class="headline-link">
+                        Meet the weekend warriors preparing to defend Europe from Russia
+                    </a>
+                    <p class="summary">Lithuania’s citizen-soldiers are part of growing volunteer forces in the Baltics</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/europe/2026/03/05/feted-by-europes-left-spains-pedro-sanchez-is-unloved-at-home" target="_blank" rel="noopener" class="headline-link">
+                        Feted by Europe’s left, Spain’s Pedro Sánchez is unloved at home
+                    </a>
+                    <p class="summary">The prime minister is trying to become an icon of resistance to Donald Trump</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/europe/2026/03/05/why-one-of-germanys-richest-regions-is-gripped-with-anxiety" target="_blank" rel="noopener" class="headline-link">
+                        Why one of Germany’s richest regions is gripped with anxiety
+                    </a>
+                    <p class="summary">Baden-Württemberg’s election is overshadowed by worries over deindustrialisation</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/britain/2026/03/05/dubai-is-the-front-line-of-britains-war-with-itself" target="_blank" rel="noopener" class="headline-link">
+                        Dubai is the front line of Britain’s war with itself
+                    </a>
+                    <p class="summary">They’re not laughing now, are they?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/britain/2026/03/05/iran-exposes-three-harsh-truths-for-britain" target="_blank" rel="noopener" class="headline-link">
+                        Iran exposes three harsh truths for Britain
+                    </a>
+                    <p class="summary">They stem from fundamentally different views of how the world now works</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/britain/2026/03/05/britains-class-politics-is-back-with-a-green-twist" target="_blank" rel="noopener" class="headline-link">
+                        Britain’s class politics is back—with a Green twist
+                    </a>
+                    <p class="summary">Greens and Reform are turning precarious voters against the establishment</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/briefing/2026/03/05/an-ai-disaster-is-getting-ever-closer" target="_blank" rel="noopener" class="headline-link">
+                        An AI disaster is getting ever closer
+                    </a>
+                    <p class="summary">The spat between America’s government and Anthropic intensifies an alarming trend</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/letters/2026/03/05/are-britains-trade-union-laws-returning-to-the-1970s" target="_blank" rel="noopener" class="headline-link">
+                        ­Are Britain’s trade-union laws returning to the 1970s?
+                    </a>
+                    <p class="summary">Also this week, navy ships, reducing poverty in America, Mexico’s exports, a history of the potato, tenor singers</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/leaders/2026/03/05/nigel-farage-and-zack-polanski-best-of-frenemies" target="_blank" rel="noopener" class="headline-link">
+                        Nigel Farage and Zack Polanski: best of frenemies
+                    </a>
+                    <p class="summary">Britain’s twin populists have a symbiotic relationship</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/leaders/2026/03/05/ai-danger-gets-real" target="_blank" rel="noopener" class="headline-link">
+                        AI danger gets real
+                    </a>
+                    <p class="summary">The squabble between America’s government and Anthropic makes an AI disaster more likely</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/the-world-this-week/2026/03/05/the-weekly-cartoon" target="_blank" rel="noopener" class="headline-link">
+                        The weekly cartoon
+                    </a>
+                    
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/the-world-this-week/2026/03/05/business" target="_blank" rel="noopener" class="headline-link">
+                        Business
+                    </a>
+                    
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:45 PM</div>
+                    <a href="https://www.economist.com/the-world-this-week/2026/03/05/politics" target="_blank" rel="noopener" class="headline-link">
+                        Politics
+                    </a>
+                    
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:30 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/05/binyamin-netanyahu-has-his-war" target="_blank" rel="noopener" class="headline-link">
+                        Binyamin Netanyahu has his war
+                    </a>
+                    <p class="summary">If it goes wrong, he will also get the blame</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:03 PM</div>
+                    <a href="https://www.economist.com/by-invitation/2026/03/05/any-attempt-at-regime-change-is-likely-to-repeat-past-mistakes" target="_blank" rel="noopener" class="headline-link">
+                        Any attempt at regime change is likely to repeat past mistakes
+                    </a>
+                    <p class="summary">Air power, full-on invasion, arming the opposition: the result is usually the same, writes Philip Gordon</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:48 AM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/05/spars-and-strikes-who-backs-iran-war" target="_blank" rel="noopener" class="headline-link">
+                        Spars and strikes: Who backs Iran war?
+                    </a>
+                    <p class="summary">Also on the daily podcast: France’s nuclear build-up and MAGA brands flop</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:39 AM</div>
+                    <a href="https://www.economist.com/in-brief/2026/03/05/the-us-in-brief-senate-wont-stand-in-the-way-of-trumps-war" target="_blank" rel="noopener" class="headline-link">
+                        The US in Brief: Senate won’t stand in the way of Trump’s war
+                    </a>
+                    <p class="summary">Our daily political update, featuring the stories that matter</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:26 AM</div>
+                    <a href="https://www.economist.com/interactive/britain/2026/03/05/why-the-british-government-is-spending-more-on-hedgerows" target="_blank" rel="noopener" class="headline-link">
+                        Why the British government is spending more on hedgerows
+                    </a>
+                    <p class="summary">They are stitching the countryside back together</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:14 AM</div>
+                    <a href="https://www.economist.com/asia/2026/03/05/investigative-journalism-in-india-is-under-threat" target="_blank" rel="noopener" class="headline-link">
+                        Investigative journalism in India is under threat
+                    </a>
+                    <p class="summary">Politicians and tycoons are tightening their grip</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:06 AM</div>
+                    <a href="https://www.economist.com/europe/2026/03/05/russias-starlink-shutdown-is-a-blow-to-its-soldiers-and-drones" target="_blank" rel="noopener" class="headline-link">
+                        Russia’s Starlink shutdown is a blow to its soldiers and drones
+                    </a>
+                    <p class="summary">Launching its own satellite network is not realistic</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:02 AM</div>
+                    <a href="https://www.economist.com/leaders/2026/03/05/donald-trump-must-stop-soon" target="_blank" rel="noopener" class="headline-link">
+                        Donald Trump must stop soon
+                    </a>
+                    <p class="summary">His ill-considered conflict risks descending into chaos</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:02 AM</div>
+                    <a href="https://www.economist.com/briefing/2026/03/05/how-the-latest-regional-conflict-is-reshaping-the-middle-east" target="_blank" rel="noopener" class="headline-link">
+                        How the latest regional conflict is reshaping the Middle East
+                    </a>
+                    <p class="summary">Neither Iran, nor Israel, nor the Gulf will ever be quite the same</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 10:36 AM</div>
+                    <a href="https://www.economist.com/finance-and-economics/2026/03/05/to-understand-why-countries-grow-look-at-their-firms" target="_blank" rel="noopener" class="headline-link">
+                        To understand why countries grow, look at their firms
+                    </a>
+                    <p class="summary">The third way in development economics</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 10:34 AM</div>
+                    <a href="https://www.economist.com/leaders/2026/03/05/its-time-to-unleash-europes-pensions" target="_blank" rel="noopener" class="headline-link">
+                        It’s time to unleash Europe’s pensions
+                    </a>
+                    <p class="summary">One reform offers both security in old age and dynamism now</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 10:33 AM</div>
+                    <a href="https://www.economist.com/finance-and-economics/2026/03/05/indias-economy-is-not-as-big-as-economists-thought" target="_blank" rel="noopener" class="headline-link">
+                        India’s economy is not as big as economists thought
+                    </a>
+                    <p class="summary">But it is growing faster</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 10:31 AM</div>
+                    <a href="https://www.economist.com/finance-and-economics/2026/03/05/americans-electricity-bills-are-up-dont-blame-ai" target="_blank" rel="noopener" class="headline-link">
+                        Americans’ electricity bills are up. Don’t blame AI
+                    </a>
+                    <p class="summary">Were it not for data centres, prices might be even higher</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 09:26 AM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/05/indian-politics-has-a-vip-problem" target="_blank" rel="noopener" class="headline-link">
+                        Indian politics has a “VIP” problem
+                    </a>
+                    <p class="summary">A handpicked article read aloud from the latest issue of The Economist</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 09:06 AM</div>
+                    <a href="https://www.economist.com/essay/2026/03/05/a-house-divided" target="_blank" rel="noopener" class="headline-link">
+                        A house divided
+                    </a>
+                    <p class="summary">The struggle for the soul of a nation</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 10:58 PM</div>
+                    <a href="https://www.economist.com/finance-and-economics/2026/03/04/european-pensions-are-a-30trn-missed-opportunity" target="_blank" rel="noopener" class="headline-link">
+                        European pensions are a $30trn missed opportunity
+                    </a>
+                    <p class="summary">If only more countries went Dutch</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 08:51 PM</div>
+                    <a href="https://www.economist.com/europe/2026/03/04/in-times-of-chaos-europe-is-the-muddled-power-the-world-needs" target="_blank" rel="noopener" class="headline-link">
+                        In times of chaos, Europe is the muddled power the world needs
+                    </a>
+                    <p class="summary">In praise of the dreaded European working group</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 07:47 PM</div>
+                    <a href="https://www.economist.com/united-states/2026/03/04/a-once-proud-tradition-is-becoming-awkward-for-elite-universities" target="_blank" rel="noopener" class="headline-link">
+                        A once-proud tradition is becoming awkward for elite universities
+                    </a>
+                    <p class="summary">The slow demise of the swim test</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 07:26 PM</div>
+                    <a href="https://www.economist.com/business/2026/03/04/what-the-heirs-to-general-electric-did-next" target="_blank" rel="noopener" class="headline-link">
+                        What the heirs to General Electric did next
+                    </a>
+                    <p class="summary">Their success illustrates the benefits of breaking up—and more</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 06:45 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/04/the-iran-war-has-been-a-stunning-aerial-success" target="_blank" rel="noopener" class="headline-link">
+                        The Iran war has been a stunning aerial success
+                    </a>
+                    <p class="summary">Even if, at the political level, its direction is a mess</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 06:27 PM</div>
+                    <a href="https://www.economist.com/science-and-technology/2026/03/04/a-basket-of-new-fruit-varieties-is-coming-your-way" target="_blank" rel="noopener" class="headline-link">
+                        A basket of new fruit varieties is coming your way
+                    </a>
+                    <p class="summary">Thank gene editing</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 06:19 PM</div>
+                    <a href="https://www.economist.com/leaders/2026/03/04/china-needs-a-more-ambitious-growth-target" target="_blank" rel="noopener" class="headline-link">
+                        China needs a more ambitious growth target
+                    </a>
+                    <p class="summary">Otherwise a fourth year of deflation awaits</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 06:15 PM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/04/why-better-chips-will-need-more-extreme-physics" target="_blank" rel="noopener" class="headline-link">
+                        Why better chips will need more extreme physics
+                    </a>
+                    <p class="summary">Our podcast on science and technology. This week, how engineers are pushing the extremes of physics to build the next generation of computer chips</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 04:25 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/04/the-start-of-the-iran-war-was-determined-by-spying-success" target="_blank" rel="noopener" class="headline-link">
+                        The start of the Iran war was determined by spying success
+                    </a>
+                    <p class="summary">But even when assassinations come off, the long-term consequences are unclear</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 04:16 PM</div>
+                    <a href="https://www.economist.com/interactive/2026-iran-war-tracker/" target="_blank" rel="noopener" class="headline-link">
+                        The Iran war in maps and charts
+                    </a>
+                    <p class="summary">Visualisations that tell the story of the conflict</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 01:26 PM</div>
+                    <a href="https://www.economist.com/interactive/united-states/2026/03/04/the-new-president-of-the-united-states" target="_blank" rel="noopener" class="headline-link">
+                        The New President of the United States
+                    </a>
+                    <p class="summary">Our report from 1901</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 12:02 PM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/04/crude-awakening-iran-oil-shock" target="_blank" rel="noopener" class="headline-link">
+                        Crude awakening: Iran oil shock
+                    </a>
+                    <p class="summary">Also on the daily podcast: Student loans in Britain and a line dancing revival</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 11:10 AM</div>
+                    <a href="https://www.economist.com/in-brief/2026/03/04/the-us-in-brief-the-democrat-who-could-flip-texas" target="_blank" rel="noopener" class="headline-link">
+                        The US in Brief: The Democrat who could flip Texas
+                    </a>
+                    <p class="summary">Our daily political update, featuring the stories that matter</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 10:51 AM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/04/preparing-ai-for-the-real-world" target="_blank" rel="noopener" class="headline-link">
+                        Preparing AI for the real world
+                    </a>
+                    <p class="summary">A handpicked article read aloud from the latest issue of The Economist</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 09:26 AM</div>
+                    <a href="https://www.economist.com/graphic-detail/2026/03/04/how-250-years-of-immigration-shaped-america" target="_blank" rel="noopener" class="headline-link">
+                        How 250 years of immigration shaped America
+                    </a>
+                    <p class="summary">Cycles of openness and restriction are as old as the country itself</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 09:13 AM</div>
+                    <a href="https://www.economist.com/briefing/2026/03/04/binyamin-netanyahu-is-the-big-winner-from-the-iran-war-for-now" target="_blank" rel="noopener" class="headline-link">
+                        Binyamin Netanyahu is the big winner from the Iran war, for now
+                    </a>
+                    <p class="summary">To avoid a row with Donald Trump, Western allies are endorsing Israeli theories of war</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 01:34 AM</div>
+                    <a href="https://www.economist.com/by-invitation/2026/03/04/america-is-a-nation-of-immigrants-with-a-history-of-exclusion" target="_blank" rel="noopener" class="headline-link">
+                        America is a nation of immigrants with a history of exclusion
+                    </a>
+                    <p class="summary">Its immigration policy has always been shaped by a conditional, shifting definition of desirability, writes Mae Ngai</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 04, 01:30 AM</div>
+                    <a href="https://www.economist.com/by-invitation/2026/03/04/if-19th-century-plutocrats-are-dinosaurs-were-now-in-jurassic-park" target="_blank" rel="noopener" class="headline-link">
+                        If 19th-century plutocrats are dinosaurs, we’re now in Jurassic Park
+                    </a>
+                    <p class="summary">The worst traits of America’s Gilded Age are back, writes Richard White</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 10:44 PM</div>
+                    <a href="https://www.economist.com/international/2026/03/03/binyamin-netanyahu-is-the-big-winner-from-the-iran-war-for-now" target="_blank" rel="noopener" class="headline-link">
+                        Binyamin Netanyahu is the big winner from the Iran war, for now
+                    </a>
+                    <p class="summary">To avoid a row with Donald Trump, Western allies are endorsing Israeli theories of war</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 10:21 PM</div>
+                    <a href="https://www.economist.com/united-states/2026/03/03/donald-trump-bets-big-on-the-iran-war" target="_blank" rel="noopener" class="headline-link">
+                        Donald Trump bets big on the Iran war
+                    </a>
+                    <p class="summary">If it fails to pay off politically, will he cut his losses or double down?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 08:52 PM</div>
+                    <a href="https://www.economist.com/britain/2026/03/03/rachel-reevess-economic-update-might-have-appeared-boring" target="_blank" rel="noopener" class="headline-link">
+                        Rachel Reeves’s economic update might have appeared boring
+                    </a>
+                    <p class="summary">But it hinted at big problems to come</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 08:19 PM</div>
+                    <a href="https://www.economist.com/finance-and-economics/2026/03/03/why-war-isnt-always-good-for-defence-stocks" target="_blank" rel="noopener" class="headline-link">
+                        Why war isn’t always good for defence stocks
+                    </a>
+                    <p class="summary">They win only if governments want just enough weapons—but not too many</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 08:15 PM</div>
+                    <a href="https://www.economist.com/finance-and-economics/2026/03/03/the-nightmare-war-scenario-is-becoming-reality-in-energy-markets" target="_blank" rel="noopener" class="headline-link">
+                        The nightmare war scenario is becoming reality in energy markets
+                    </a>
+                    <p class="summary">The longer the war in the Gulf, the harsher the global economic fallout</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 07:46 PM</div>
+                    <a href="https://www.economist.com/by-invitation/2026/03/03/the-economist-is-wrong-on-the-robin-hood-state" target="_blank" rel="noopener" class="headline-link">
+                        The Economist is wrong on the Robin Hood state
+                    </a>
+                    <p class="summary">Taxing wealth transfers more would raise a lot from the rich and be good for democracy, writes Ray Madoff</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 07:32 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/03/are-gulf-states-running-out-of-missile-interceptors" target="_blank" rel="noopener" class="headline-link">
+                        Are Gulf states running out of missile interceptors?
+                    </a>
+                    <p class="summary">Their rulers insist not but they are burning through their stockpiles fast</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 05:41 PM</div>
+                    <a href="https://www.economist.com/business/2026/03/03/the-iran-war-is-a-jolt-to-dubais-business-model" target="_blank" rel="noopener" class="headline-link">
+                        The Iran war is a jolt to Dubai’s business model
+                    </a>
+                    <p class="summary">Can the emirate keep people and investors coming?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 05:12 PM</div>
+                    <a href="https://www.economist.com/britain/2026/03/03/blighty-newsletter-iran-exposes-three-harsh-truths-for-britain" target="_blank" rel="noopener" class="headline-link">
+                        Blighty newsletter: Iran exposes three harsh truths for Britain
+                    </a>
+                    <p class="summary">Annoying Donald Trump isn’t Sir Keir Starmer’s only problem, writes Daniel Franklin, our senior editor</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 04:55 PM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/03/chinas-tropical-free-trade-experiment" target="_blank" rel="noopener" class="headline-link">
+                        China’s tropical free-trade experiment
+                    </a>
+                    <p class="summary">Our weekly podcast on China. This week, why the Communist Party is betting big on an island backwater</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 04:41 PM</div>
+                    <a href="https://www.economist.com/europe/2026/03/03/what-frances-new-nuclear-arms-doctrine-means-for-europe" target="_blank" rel="noopener" class="headline-link">
+                        What France’s new nuclear-arms doctrine means for Europe
+                    </a>
+                    <p class="summary">Emmanuel Macron will build more warheads and include allies</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 04:05 PM</div>
+                    <a href="https://www.economist.com/united-states/2026/03/03/checks-and-balance-newsletter-the-new-cancel-culture-on-campuses" target="_blank" rel="noopener" class="headline-link">
+                        Checks and Balance newsletter: The new cancel culture on campuses
+                    </a>
+                    <p class="summary">John Prideaux, our US editor, reports on the pressures facing American universities in the Trump era</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 03:49 PM</div>
+                    <a href="https://www.economist.com/letters/2026/03/03/frances-digital-tsar-responds-to-our-argument-that-teenagers-should-continue-to-use-social-media-platforms" target="_blank" rel="noopener" class="headline-link">
+                        France’s digital tsar responds to our argument that teenagers should continue to use social-media platforms
+                    </a>
+                    <p class="summary">How best to protect young people in a digital environment that crosses borders and constantly evolves</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 03:44 PM</div>
+                    <a href="https://www.economist.com/culture/2026/03/03/how-to-hear-an-album-before-it-drops" target="_blank" rel="noopener" class="headline-link">
+                        How to hear an album before it drops
+                    </a>
+                    <p class="summary">Fans are flocking to listening parties</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 02:46 PM</div>
+                    <a href="https://www.economist.com/the-americas/2026/03/03/cubas-economic-divides-are-widening" target="_blank" rel="noopener" class="headline-link">
+                        Cuba’s economic divides are widening
+                    </a>
+                    <p class="summary">Luck and guile increasingly determine who gets how much</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 02:29 PM</div>
+                    <a href="https://www.economist.com/obituary/2026/03/03/ali-khamenei-hoped-his-legacy-might-last-for-ever" target="_blank" rel="noopener" class="headline-link">
+                        Ali Khamenei hoped his legacy might last for ever
+                    </a>
+                    <p class="summary">Iran’s Supreme Leader was killed on February 28th, aged 86</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 01:09 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/03/why-ali-khamenei-may-have-welcomed-the-nature-of-his-death" target="_blank" rel="noopener" class="headline-link">
+                        Why Ali Khamenei may have welcomed the nature of his death
+                    </a>
+                    <p class="summary">The ideology of martyrdom could prolong Iran’s regime—and the war</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 12:27 PM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/03/escalation-middle-east-war-widens" target="_blank" rel="noopener" class="headline-link">
+                        Escalation: Middle East war widens
+                    </a>
+                    <p class="summary">Also on the daily podcast: Pentagon v Anthropic and Pokémon turns 30</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 11:46 AM</div>
+                    <a href="https://www.economist.com/in-brief/2026/03/03/the-us-in-brief-more-troops-more-fury" target="_blank" rel="noopener" class="headline-link">
+                        The US in Brief: More troops, more fury
+                    </a>
+                    <p class="summary">Our daily political update, featuring the stories that matter</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 03, 08:57 AM</div>
+                    <a href="https://www.economist.com/podcasts/2026/03/03/a-widening-war-in-the-middle-east" target="_blank" rel="noopener" class="headline-link">
+                        A widening war in the Middle East
+                    </a>
+                    <p class="summary">A handpicked article read aloud from the latest issue of The Economist</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 02, 10:21 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/02/the-iran-war-is-rapidly-engulfing-the-region" target="_blank" rel="noopener" class="headline-link">
+                        The Iran war is rapidly engulfing the region
+                    </a>
+                    <p class="summary">How far could each side escalate?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 02, 09:25 PM</div>
+                    <a href="https://www.economist.com/middle-east-and-africa/2026/03/02/hizbullah-the-reluctant-proxy-strikes-at-israel" target="_blank" rel="noopener" class="headline-link">
+                        Hizbullah, the reluctant proxy, strikes at Israel
+                    </a>
+                    <p class="summary">But the group’s limited actions suggest that it does not want to be in a war that could finish it off</p>
+                </article>
+            </div>
+        </section>
+        <section class="pub-section" id="pub-2" style="display:none">
+            <div class="pub-header" style="--accent:#000000">
+                <h2>New York Times</h2>
+                <span class="article-count">23 stories · last 7 days</span>
+            </div>
+            <div class="articles">
+                
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:56 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/business/economy/trump-iran-oil-economy-fallout.html" target="_blank" rel="noopener" class="headline-link">
+                        As Oil Prices Rise, Trump’s War With Iran Becomes a Worldwide Economic Hazard
+                    </a>
+                    <p class="summary">The president insists conflict with Iran will be brief, but world leaders are preparing for severe economic blowback.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 06:44 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/business/iran-oil-gas-asia.html" target="_blank" rel="noopener" class="headline-link">
+                        Countries in Asia Try to Contain the Economic Fallout of the Mideast Conflict
+                    </a>
+                    <p class="summary">Across Asia, where countries are highly exposed to rising oil and gas costs and tightening supply, governments are acting to mitigate economic harm.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:16 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/business/energy-environment/oil-gas-iran-war.html" target="_blank" rel="noopener" class="headline-link">
+                        ‘The Old Game Is Back’: Oil Is a Potent Geopolitical Tool Again
+                    </a>
+                    <p class="summary">The war in the Middle East has sent prices soaring, showing how much the world continues to depend on reliable supplies of oil and gas.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 06:49 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/nyregion/gracie-bomb-scene-mamdani.html" target="_blank" rel="noopener" class="headline-link">
+                        Chaos on Mamdani’s Doorstep: ‘We’ve Never Had Anything Like This Here’
+                    </a>
+                    <p class="summary">For two hours, the streets around Gracie Mansion became the stage for a heated protest, reflecting a nation seething with angst and unease.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 06:21 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/us/ice-immigration-crackdown-minnesota-ohio.html" target="_blank" rel="noopener" class="headline-link">
+                        Locals in Other States Prepare for ICE With Lots of Rumors and Little Information
+                    </a>
+                    <p class="summary">After the sprawling and chaotic federal immigration crackdown in Minnesota, jurisdictions in other states have been bracing for a range of scenarios.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 03:48 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/us/politics/trump-republicans-midterms.html" target="_blank" rel="noopener" class="headline-link">
+                        Trump Threatens to Crowd Out Republicans’ Midterm Message
+                    </a>
+                    <p class="summary">As the G.O.P. gathered in Miami for a party retreat where lawmakers hoped to focus on the economy, the president was threatening to block his own party’s leg…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:28 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/nyregion/fbi-subpoena-arizona-maricopa-county-election.html" target="_blank" rel="noopener" class="headline-link">
+                        F.B.I. Subpoenas Records in Arizona in Expansion of 2020 Voting Inquiry
+                    </a>
+                    <p class="summary">The subpoena was issued in recent days to the Arizona State Senate, which oversaw a sprawling but partisan audit of the vote result in Maricopa County.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 06:19 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/technology/anthropic-defense-artificial-intelligence-lawsuit.html" target="_blank" rel="noopener" class="headline-link">
+                        Anthropic Sues Department of Defense Over ‘Supply Chain Risk’ Label
+                    </a>
+                    <p class="summary">The artificial intelligence company filed two lawsuits against the Department of Defense, saying it was being punished on ideological grounds.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 05:24 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/us/politics/voice-of-america-audit.html" target="_blank" rel="noopener" class="headline-link">
+                        As Kari Lake Sought to Shutter Voice of America, Parent Agency Rebuffed Auditors
+                    </a>
+                    <p class="summary">A new report says the lack of information provided for a required annual examination was so “pervasive” that auditors declined to opine on the agency’s finan…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 12:26 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/us/antonio-wiley-missing-mother-found.html" target="_blank" rel="noopener" class="headline-link">
+                        His Mother Vanished When He Was 14. 33 Years Later, He Found Her.
+                    </a>
+                    <p class="summary">Antonio Wiley’s mother, Anita, vanished during a time when her hometown Detroit was wracked by drugs and crime. It took three decades and an extraordinary ef…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:52 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/us/casey-wasserman-epstein-company-name.html" target="_blank" rel="noopener" class="headline-link">
+                        Casey Wasserman Agency Removes His Name From Company in Epstein Fallout
+                    </a>
+                    <p class="summary">The sports and marketing agency founded by Casey Wasserman dropped his name in the latest fallout from the Epstein files.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 06:55 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/us/billionaires-federal-election-campaign-contributions.html" target="_blank" rel="noopener" class="headline-link">
+                        Billionaires Made 19% of Federal Election Campaign Contributions in 2024
+                    </a>
+                    <p class="summary">Billionaires made 19 percent of all reported federal campaign contributions in 2024, a Times analysis shows, and even more in some local elections. Wealthy d…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 08:05 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/arts/music/live-nation-ticketmaster-antitrust-suit-settled.html" target="_blank" rel="noopener" class="headline-link">
+                        Live Nation, Ticketmaster’s Owner, Settles Antitrust Case With Justice Dept.
+                    </a>
+                    <p class="summary">The agreement, which requires a judicial sign-off, would avoid a breakup of the concert giant. But states that joined the suit object to the terms.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 09:00 AM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/arts/kennedy-center-closing-reactions.html" target="_blank" rel="noopener" class="headline-link">
+                        For Longtime Kennedy Center Patrons, a ‘Lifeline’ Has Been Cut
+                    </a>
+                    <p class="summary">As President Trump prepares to close Washington’s premier performing arts venue for two years, loyal patrons wonder where they’ll get their cultural fix.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 03:00 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/arts/music/washington-national-opera-treemonisha.html" target="_blank" rel="noopener" class="headline-link">
+                        After Kennedy Center Exit, Washington National Opera Returns
+                    </a>
+                    <p class="summary">Washington National Opera managed to resume performances within two months of its abrupt departure. But there are still challenges ahead.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:34 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/us/ohio-state-president-resigns.html" target="_blank" rel="noopener" class="headline-link">
+                        O.S.U. President Walter Carter Jr. Resigns Over ‘Inappropriate Relationship’
+                    </a>
+                    <p class="summary">The president, Walter Carter Jr., said he “made a mistake in allowing inappropriate access to Ohio State leadership.”</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:36 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/business/media/fake-ai-generated-accounts-social-media-supplements.html" target="_blank" rel="noopener" class="headline-link">
+                        An Amish Avatar and an A.I. Monk Are Pitching Supplements on Social Media
+                    </a>
+                    <p class="summary">Influencers have long hawked supplements on platforms like Instagram and TikTok. Increasingly, the influencers are fake.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 03:12 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/opinion/diagnosis-delusional-infestation-bugs.html" target="_blank" rel="noopener" class="headline-link">
+                        They Feel Bugs Inside Them. Doctors Don’t Know What They Are Either.
+                    </a>
+                    <p class="summary">Delusional infestation is one of the darkest embodiments of medical uncertainty.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:17 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/opinion/international-world/iran-supreme-leader-mojtaba-khamenei.html" target="_blank" rel="noopener" class="headline-link">
+                        Iran’s New Supreme Leader Represents a Choice: Defiance
+                    </a>
+                    <p class="summary">Iran’s new supreme leader has been selected not to break with the regime but to preserve it.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:29 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/us/politics/alexander-butterfield-dead.html" target="_blank" rel="noopener" class="headline-link">
+                        Alexander Butterfield, Who Revealed Nixon Tapes in Watergate Scandal, Dies at 99
+                    </a>
+                    <p class="summary">“There is tape in the Oval Office,” said Mr. Butterfield, a former White House aide, in testimony that rocked the Watergate hearings and led to the president…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 04:01 AM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/world/europe/ukraine-zelensky-frontline-tour.html" target="_blank" rel="noopener" class="headline-link">
+                        On the Road With Zelensky, Weathered, Weary and Fighting On
+                    </a>
+                    <p class="summary">Ukraine’s leader, Volodymyr Zelensky, traveled east to visit frontline troops trying to stave off Russian attacks, and invited reporters for The New York Tim…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:00 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/nyregion/mamdani-childcare-expansion-3k.html" target="_blank" rel="noopener" class="headline-link">
+                        Mamdani to Expand 3-K by 1,000 Seats, Including on Staten Island
+                    </a>
+                    <p class="summary">Mayor Zohran Mamdani will announce that New York City is expanding free preschool for 3-year-olds, adding 1,000 seats to meet demand across the city.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 04:28 PM</div>
+                    <a href="https://www.nytimes.com/2026/03/09/climate/space-mirror-satellite-solar.html" target="_blank" rel="noopener" class="headline-link">
+                        A Night Light in the Sky? Reflect Orbital Wants to Launch a Big Space Mirror.
+                    </a>
+                    <p class="summary">The company is seeking F.C.C. approval to test an idea to reflect sunlight to Earth at night, possibly powering solar panels. Critics say it could be bad for…</p>
+                </article>
+            </div>
+        </section>
+        <section class="pub-section" id="pub-3" style="display:none">
+            <div class="pub-header" style="--accent:#D4001A">
+                <h2>The New Yorker</h2>
+                <span class="article-count">50 stories · last 7 days</span>
+            </div>
+            <div class="articles">
+                
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:28 PM</div>
+                    <a href="https://www.newyorker.com/news/the-lede/what-the-selection-of-irans-new-leader-might-mean-for-the-war" target="_blank" rel="noopener" class="headline-link">
+                        Iran’s New Supreme Leader Is Mojtaba Khamenei
+                    </a>
+                    <p class="summary">The selection of Mojtaba Khamenei, the son of the assassinated Supreme Leader, signals defiance, as the Islamic Republic confronts the gravest threat in its …</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 02:07 PM</div>
+                    <a href="https://www.newyorker.com/cartoons/daily-cartoon/monday-march-9th-serious-cat-videos" target="_blank" rel="noopener" class="headline-link">
+                        Daily Cartoon: Monday, March 9th
+                    </a>
+                    <p class="summary">A drawing that riffs on the latest news and happenings.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/the-battle-between-good-and-evil" target="_blank" rel="noopener" class="headline-link">
+                        The Battle Between Good and Evil
+                    </a>
+                    <p class="summary">Angel or devil, book or TV, tea or Martini—in the eternal conflict, which side wins out?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/news/the-financial-page/how-to-prevent-insider-trading-on-trumps-wars" target="_blank" rel="noopener" class="headline-link">
+                        How to Prevent Insider Trading on Trump’s Wars
+                    </a>
+                    <p class="summary">A flurry of well-timed and anonymous bets on Polymarket right before the U.S. strike on Iran shows the need for reform.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/podcast/the-new-yorker-radio-hour/the-global-fallout-of-donald-trumps-war-on-iran" target="_blank" rel="noopener" class="headline-link">
+                        The Global Fallout of Donald Trump’s War on Iran
+                    </a>
+                    <p class="summary">As the conflict rapidly spreads throughout the Middle East, the New Yorker writers Dexter Filkins and Robin Wright discuss the stakes for Iran, the U.S., and…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/culture/the-current-cinema/the-oscars-who-will-win-and-who-should-win" target="_blank" rel="noopener" class="headline-link">
+                        The Oscars: Who Will Win and Who Should Win
+                    </a>
+                    <p class="summary">Every awards season is one battle after another, and the ninety-eighth Academy Awards ceremony promises a more climactic showdown than most.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/gold-street-barn-henri-cole-poem" target="_blank" rel="noopener" class="headline-link">
+                        “Gold Street Barn,” by Henri Cole
+                    </a>
+                    <p class="summary">“From my upstairs-bedroom window, I used to ponder / its sagging timber shoulders and open gable roof.”</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/a-wintry-utopia-in-vermonts-northeast-kingdom" target="_blank" rel="noopener" class="headline-link">
+                        A Wintry Utopia in Vermont’s Northeast Kingdom
+                    </a>
+                    <p class="summary">The region has long attracted idealists, from the radical performers of Bread & Puppet in the seventies to the striving artisan farmers of the early two-thou…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/mark-rosenblatt-profile-theatre" target="_blank" rel="noopener" class="headline-link">
+                        “Giant” Takes on Roald Dahl and His Antisemitism
+                    </a>
+                    <p class="summary">Mark Rosenblatt’s début play brings light, shadow, and humor to its portrait of a troubled writer.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/frankie-focus-attention-grabber" target="_blank" rel="noopener" class="headline-link">
+                        Frankie Focus, Attention-Grabber
+                    </a>
+                    <p class="summary">Governor Kathy Hochul’s recent policy cracks down on phones in schools. Her enforcer? A freaky neon-green creature.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/love-in-the-time-of-ai-companions" target="_blank" rel="noopener" class="headline-link">
+                        Love in the Time of A.I. Companions
+                    </a>
+                    <p class="summary">Some people now have an A.I. bestie. Some have a husband. Some have three.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/the-carbon-atoms-of-saved-things-brenda-hillman-poem" target="_blank" rel="noopener" class="headline-link">
+                        “The Carbon Atoms of Saved Things,” by Brenda Hillman
+                    </a>
+                    <p class="summary">“The carbon atom has six electrons / that move faster than bodies move / from one form to another.”</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/a-day-in-the-pre-internet-world" target="_blank" rel="noopener" class="headline-link">
+                        A Day in the Pre-Internet World, as Understood by Someone Born in 2002
+                    </a>
+                    <p class="summary">​When clock radios, film cameras, and the Yellow Pages ruled the world.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/the-zombie-regulator" target="_blank" rel="noopener" class="headline-link">
+                        Trump’s Reckless Gutting of the Consumer Financial Protection Bureau
+                    </a>
+                    <p class="summary">As the cost of living continues to spiral upward, the Trump Administration is gutting the government agency built to protect Americans from financial ruin.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/the-perverse-tender-worlds-of-paul-thomas-anderson" target="_blank" rel="noopener" class="headline-link">
+                        The Perverse, Tender Worlds of Paul Thomas Anderson
+                    </a>
+                    <p class="summary">The filmmaker behind “One Battle After Another” specializes in stories about people who are cut off, adrift, desperately seeking connection. His films are st…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/09/how-god-got-so-great" target="_blank" rel="noopener" class="headline-link">
+                        How God Got So Great
+                    </a>
+                    <p class="summary">What monotheism means is surprisingly hard to pin down, but there’s a reason it swept the world.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/end-of-days-tiny-gardens-everywhere-floodlines-murder-bimbo" target="_blank" rel="noopener" class="headline-link">
+                        Briefly Noted Book Reviews
+                    </a>
+                    <p class="summary">“End of Days,” “Tiny Gardens Everywhere,” “Floodlines,” and “Murder Bimbo.”</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/joe-vilardi-likes-to-move-it" target="_blank" rel="noopener" class="headline-link">
+                        Joe Vilardi Likes to Move It
+                    </a>
+                    <p class="summary">The master rigger has hoisted huge art works for Richard Serra, Jeff Koons, and MOMA. Now he’s brought new pieces by Michael Heizer from a Nevada ranch to Ga…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/news/the-lede/the-bloody-life-and-legacy-of-el-mencho" target="_blank" rel="noopener" class="headline-link">
+                        The Bloody Life and Legacy of El Mencho
+                    </a>
+                    <p class="summary">How the death of the notorious drug kingpin unleashed a wave of cartel violence across Mexico.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/stay-alive-berlin-1939-1945-ian-buruma-book-review" target="_blank" rel="noopener" class="headline-link">
+                        Life in Hitler’s Capital
+                    </a>
+                    <p class="summary">In a new book about everyday existence in wartime Berlin, students, musicians, Nazi maidens, and members of the resistance are allowed to speak for themselves.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/the-unmaking-of-the-american-university" target="_blank" rel="noopener" class="headline-link">
+                        The Unmaking of the American University
+                    </a>
+                    <p class="summary">For decades, research universities have relied on federal funding, with no guarantee that it will last. Now their survival may depend on compliance with the …</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/where-is-the-iran-war-headed" target="_blank" rel="noopener" class="headline-link">
+                        Where Is the Iran War Headed?
+                    </a>
+                    <p class="summary">President Trump has both called for Iranians to rise up and oust the ruthless theocracy and then said that he’s fully prepared to deal with a new religious l…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/podcast/the-writers-voice/addie-citchens-reads-the-city-is-a-graveyard" target="_blank" rel="noopener" class="headline-link">
+                        Addie Citchens Reads “The City Is a Graveyard”
+                    </a>
+                    <p class="summary">The author reads her story from the March 16, 2026, issue of the magazine.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/the-city-is-a-graveyard-fiction-addie-citchens" target="_blank" rel="noopener" class="headline-link">
+                        “The City Is a Graveyard,” by Addie Citchens
+                    </a>
+                    <p class="summary">Life is a wild, silly ride when you’re out here yearning as hard as you are.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/news/annals-of-education/how-china-learned-to-love-the-classics" target="_blank" rel="noopener" class="headline-link">
+                        How China Learned to Love the Classics
+                    </a>
+                    <p class="summary">The Chinese Communist Party has embraced the study of Greek and Latin—as, in some ways, an antidote to the modern West.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:00 AM</div>
+                    <a href="https://www.newyorker.com/books/this-week-in-fiction/addie-citchens-03-16-26" target="_blank" rel="noopener" class="headline-link">
+                        Addie Citchens on Judging Women and the Spirit Life of New Orleans
+                    </a>
+                    <p class="summary">The author discusses her story “The City Is a Graveyard.”</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 07:51 PM</div>
+                    <a href="https://www.newyorker.com/culture/photo-booth/a-nineteenth-century-countesss-sultry-selfies" target="_blank" rel="noopener" class="headline-link">
+                        A Nineteenth-Century Countess’s Sultry Selfies
+                    </a>
+                    <p class="summary">Virginia Oldoini helped conceptualize and starred in more than four hundred portraits so experimental and expressive that they have drawn comparisons to work…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/culture/critics-notebook/the-captivating-derangement-of-the-looksmaxxing-movement" target="_blank" rel="noopener" class="headline-link">
+                        The Captivating Derangement of the Looksmaxxing Movement
+                    </a>
+                    <p class="summary">In their warped and wrongheaded way, the omnipresent influencer Clavicular and his compatriots are intent on demystifying the ideal of natural beauty.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/culture/the-weekend-essay/the-most-beautiful-freezer-in-the-world" target="_blank" rel="noopener" class="headline-link">
+                        The Most Beautiful Freezer in the World
+                    </a>
+                    <p class="summary">Notes on baking at the South Pole.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 02:30 AM</div>
+                    <a href="https://www.newyorker.com/culture/on-television/neighbors-captures-the-drama-that-follows-you-home" target="_blank" rel="noopener" class="headline-link">
+                        “Neighbors” Captures the Drama That Follows You Home
+                    </a>
+                    <p class="summary">In the new HBO docuseries, about petty disputes between homeowners, everyone has a gun, a grievance, and a security camera.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 11:57 PM</div>
+                    <a href="https://www.newyorker.com/culture/the-front-row/yam-daabo-reintroduces-a-late-great-filmmaker" target="_blank" rel="noopener" class="headline-link">
+                        “Yam Daabo” Reintroduces a Late, Great Filmmaker
+                    </a>
+                    <p class="summary">Idrissa Ouédraogo’s first feature, now streaming, is a tense drama of romance amid politics and a striking advance in cinematic form.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 08:19 PM</div>
+                    <a href="https://www.newyorker.com/news/the-lede/kristi-noems-fireable-offenses" target="_blank" rel="noopener" class="headline-link">
+                        Kristi Noem’s Fireable Offenses
+                    </a>
+                    <p class="summary">The former Secretary of D.H.S. faced criticism for misspending funds, prioritizing her own self-promotion, and reflexively defending even the most brutal act…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 07:00 PM</div>
+                    <a href="https://www.newyorker.com/podcast/the-new-yorker-radio-hour/ryan-coogler-on-sinners-his-epic-film-about-race-music-and-the-undead" target="_blank" rel="noopener" class="headline-link">
+                        Ryan Coogler on “Sinners,” His Epic Film about Race, Music, and the Undead
+                    </a>
+                    <p class="summary">The director talks with the New Yorker staff writer Jelani Cobb about his movie, which has been nominated for a record-setting sixteen Academy Awards.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 04:22 PM</div>
+                    <a href="https://www.newyorker.com/cartoons/daily-cartoon/friday-march-6th-trump-ballroom-candlestick" target="_blank" rel="noopener" class="headline-link">
+                        Daily Cartoon: Friday, March 6th
+                    </a>
+                    <p class="summary">A drawing that riffs on the latest news and happenings.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 03:00 PM</div>
+                    <a href="https://www.newyorker.com/culture/cover-story/cover-story-2026-03-16" target="_blank" rel="noopener" class="headline-link">
+                        Barry Blitt’s “War-a-Lago”
+                    </a>
+                    <p class="summary">No Nobel Peace Prize in sight.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/hoppers-movie-review" target="_blank" rel="noopener" class="headline-link">
+                        “Hoppers” Movie: A Review of the New Pixar Sci-Fi Comedy
+                    </a>
+                    <p class="summary">In Daniel Chong’s cheerfully ludicrous science-fiction comedy, robot technology enables an environmental activist to walk and talk with the animals.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/culture/goings-on/stephen-shore-ryan-mcginleys-xeroxes-in-hard-copy-new-york" target="_blank" rel="noopener" class="headline-link">
+                        Stephen Shore, Ryan McGinley’s Xeroxes in “Hard Copy New York”
+                    </a>
+                    <p class="summary">Also: Jonathan Richman’s soft touch, Sean Hayes’s liquid charm in the play “The Unknown,” “The Bride!”-related culture picks, and more.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/culture/annals-of-inquiry/can-a-living-drug-cure-autoimmune-diseases" target="_blank" rel="noopener" class="headline-link">
+                        Can a “Living Drug” Cure Autoimmune Diseases?
+                    </a>
+                    <p class="summary">CAR-T was developed as a cancer treatment. Now it is showing promise for conditions that have long been considered incurable, such as lupus and multiple scle…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/news/the-lede/irans-desperate-high-risk-survival-strategy" target="_blank" rel="noopener" class="headline-link">
+                        Iran’s Desperate, High-Risk Survival Strategy
+                    </a>
+                    <p class="summary">The regime in Tehran knows it likely can’t win the war, but it can certainly globalize the pain of the conflict—even if it’s ultimately at its own expense.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 10:17 PM</div>
+                    <a href="https://www.newyorker.com/news/the-lede/the-iran-war-spreads-to-lebanon" target="_blank" rel="noopener" class="headline-link">
+                        The Iran War Spreads to Lebanon
+                    </a>
+                    <p class="summary">As the region spasms, the clash between Israel and Hezbollah is gathering force.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 05:12 PM</div>
+                    <a href="https://www.newyorker.com/cartoons/daily-cartoon/thursday-march-5th-war-tolstoy-book" target="_blank" rel="noopener" class="headline-link">
+                        Daily Cartoon: Thursday, March 5th
+                    </a>
+                    <p class="summary">A drawing that riffs on the latest news and happenings.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 04:13 PM</div>
+                    <a href="https://www.newyorker.com/news/the-lede/the-end-of-limits-on-a-presidents-wars" target="_blank" rel="noopener" class="headline-link">
+                        The End of Limits on a President’s Wars
+                    </a>
+                    <p class="summary">Past conflicts eroded Congress’s ability to decide when to go to war. Donald Trump’s attack on Iran destroyed it.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/culture/on-television/the-self-serving-seduction-of-vladimir" target="_blank" rel="noopener" class="headline-link">
+                        “Vladimir” TV Review
+                    </a>
+                    <p class="summary">The new Netflix series stars Rachel Weisz as a professor whose lust for a younger colleague renews her lust for life itself—and drives her to alarming extremes.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/podcast/critics-at-large/the-hall-of-fame-and-of-shame-of-oscars-hosts" target="_blank" rel="noopener" class="headline-link">
+                        The Hall of Fame—and of Shame—of Oscars Hosts
+                    </a>
+                    <p class="summary">Even the most seasoned performers have had trouble nailing the gig. Why is it so hard to get right?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/magazine/2026/03/16/the-sacred-vibes-of-wunmi-mosaku" target="_blank" rel="noopener" class="headline-link">
+                        The Sacred Vibes of Wunmi Mosaku
+                    </a>
+                    <p class="summary">The Oscar nominee, who plays a hoodoo healer in “Sinners,” stops at a Brooklyn apothecary and reflects on pregnancy, learning Yoruba, and blessing Michael B.…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/humor/shouts-murmurs/i-asked-chatgpt-and-this-is-what-it-said" target="_blank" rel="noopener" class="headline-link">
+                        I Asked ChatGPT and This Is What It Said
+                    </a>
+                    <p class="summary">It’s so important to care about your health, and you’re so clever to check!</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/news/new-york-journal/zohran-mamdani-and-the-art-of-the-ask" target="_blank" rel="noopener" class="headline-link">
+                        Zohran Mamdani and the Art of the Ask
+                    </a>
+                    <p class="summary">The new mayor’s plans require funding. How will he get it?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 11:00 AM</div>
+                    <a href="https://www.newyorker.com/news/fault-lines/the-no-explanation-war" target="_blank" rel="noopener" class="headline-link">
+                        The No-Explanation War
+                    </a>
+                    <p class="summary">The Trump Administration has decided that it need not make a case for military action. In the current media environment, that approach makes a disturbing kin…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 02:00 AM</div>
+                    <a href="https://www.newyorker.com/podcast/political-scene/the-washington-roundtable-on-the-iran-war" target="_blank" rel="noopener" class="headline-link">
+                        The Washington Roundtable on the Iran War
+                    </a>
+                    <p class="summary">Is the U.S. repeating the mistakes of the invasion of Iraq?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 05, 01:00 AM</div>
+                    <a href="https://www.newyorker.com/culture/the-front-row/the-bride-exclaims-and-never-explains" target="_blank" rel="noopener" class="headline-link">
+                        “The Bride!” Movie: A Review of Maggie Gyllenhaal’s New Drama
+                    </a>
+                    <p class="summary">Maggie Gyllenhaal’s imaginative adaptation of the Frankenstein story, starring Jessie Buckley and Christian Bale, leaves its premise and its principles undev…</p>
+                </article>
+            </div>
+        </section>
+        <section class="pub-section" id="pub-4" style="display:none">
+            <div class="pub-header" style="--accent:#FF3A2F">
+                <h2>New York Magazine</h2>
+                <span class="article-count">0 stories · last 7 days</span>
+            </div>
+            <div class="articles">
+                <p class="empty">No recent articles found.</p>
+            </div>
+        </section>
+        <section class="pub-section" id="pub-5" style="display:none">
+            <div class="pub-header" style="--accent:#FF6B6B">
+                <h2>The Cut</h2>
+                <span class="article-count">0 stories · last 7 days</span>
+            </div>
+            <div class="articles">
+                <p class="empty">No recent articles found.</p>
+            </div>
+        </section>
+        <section class="pub-section" id="pub-6" style="display:none">
+            <div class="pub-header" style="--accent:#0057A8">
+                <h2>Intelligencer</h2>
+                <span class="article-count">20 stories · last 7 days</span>
+            </div>
+            <div class="articles">
+                
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 07:22 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/iran-war-day-10-us-israel-mojtaba-khamenei-live-updates.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        A Secret Shortwave, a New Khamenei, and the Worst-Ever Oil Disruption
+                    </a>
+                    <p class="summary">Still no end in sight for the Iran war or its impact. Here’s the latest on Day 10.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 05:33 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/white-house-ufc-fight-trump-birthday.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        All About the White House UFC Fight on Trump’s Birthday
+                    </a>
+                    <p class="summary">The UFC is holding a cage match to celebrate America’s 250th birthday (or maybe Trump). Here’s what we know about plans, tickets, and the fight card.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 05:17 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/what-we-know-nyc-gracie-mansion-protest-bombing-attempt.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        What We Know About the ‘ISIS Inspired’ Bombing Incident Outside Gracie Mansion
+                    </a>
+                    <p class="summary">Two suspects are facing federal charges after an explosive device was thrown during a clash between protesters outside Gracie Mansion Saturday.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 04:14 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/melania-trump-documentary-amazon.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        The Melania Movie, Explained: Box Office, Reviews, and What She Made
+                    </a>
+                    <p class="summary">Why did the notoriously private First Lady film a Brett Ratner–directed documentary? It might have something to do with the $28 million paycheck.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 03:51 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/the-trump-sons-are-defense-contractors-now.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        The Trump Sons Are Defense Contractors Now
+                    </a>
+                    <p class="summary">Don Jr. and Eric’s new deal to take a drone-maker public would make their new golf-course/drone firm among the largest producers in the U.S.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="http://nymag.com/intelligencer/article/john-bolton-just-wishes-trump-bombed-iran-sooner.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        John Bolton Just Wishes Trump Bombed Iran Sooner
+                    </a>
+                    <p class="summary">Trump’s former national security adviser on his support for the war and the prospect of Cuba or Venezuela next.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 09:00 AM</div>
+                    <a href="http://nymag.com/intelligencer/article/new-york-salaries-jobs.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        What Do You Do and What Do You Make?
+                    </a>
+                    <p class="summary">Conversations with AI engineers, fashion Substackers, and weed clerks about what they brought in last year.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 04:00 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/how-the-gop-plans-to-use-talaricos-christianity-against-him.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        How the GOP Plans to Use Talarico’s Christianity Against Him
+                    </a>
+                    <p class="summary">Republicans are already turning the Democrat’s progressive theology into an attack line in the Texas Senate race.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:00 AM</div>
+                    <a href="http://nymag.com/intelligencer/article/the-olympic-hockey-jack-hughes-trump-world-cup.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        The Olympic Hockey Mess Was a Preview of Trump’s World Cup
+                    </a>
+                    <p class="summary">Get ready to be thrilled by the games — and exhausted by the politics.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 09:00 AM</div>
+                    <a href="http://nymag.com/intelligencer/article/trumps-iran-war-is-already-polling-poorly.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        Trump’s Iran War Is As Unpopular As He Is
+                    </a>
+                    <p class="summary">Americans usually back U.S. conflicts when they begin. But public support for the Iran war is already low, and it’s likely to drop.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 11:00 AM</div>
+                    <a href="http://nymag.com/intelligencer/article/the-macbook-neo-is-apples-first-true-budget-product.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        Apple Is Finally Making Cheap Computers
+                    </a>
+                    <p class="summary">The $599 MacBook Neo is the company’s first true budget product. Why now?</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 07, 10:00 AM</div>
+                    <a href="http://nymag.com/intelligencer/article/chris-murphy-says-senile-trump-has-no-plan-for-iran-war.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        ‘They Are Making It Up As They Go Along’
+                    </a>
+                    <p class="summary">Senator Chris Murphy says what he has heard behind closed doors proves a “senile” President Trump has no plan for Iran.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 10:24 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/big-beautiful-bill-2-0-may-cut-health-care-to-fund-iran-war.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        Big Beautiful Bill 2.0 May Cut Health Care to Fund Iran War
+                    </a>
+                    <p class="summary">Republicans want a second reconciliation bill before the midterms. But another vote cutting popular programs could be disastrous.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 10:00 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/white-house-war-montage-irks-ben-stiller-people-with-brains.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        White House War Montage Irks Ben Stiller, People With Brains
+                    </a>
+                    <p class="summary">Stiller asked the White House X account to leave Tropic Thunder out of its deranged propaganda, saying, “War is not a movie.”</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 05:42 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/what-we-know-about-the-strike-on-an-iranian-girls-school.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        What We Know About the Strike on an Iranian Girls’ School
+                    </a>
+                    <p class="summary">It’s still unclear who was responsible for a missile strike on a southern Iran school that left at least 175 dead, many of them children.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 04:26 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/paxtons-clever-ploy-to-stay-in-texas-senate-race.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        Paxton’s Clever Ploy to Stay in Texas Senate Race
+                    </a>
+                    <p class="summary">The Texas AG is going to the mats for Trump’s beloved SAVE Act, making it much harder for the president to push him out.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 02:16 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/it-may-finally-be-the-end-of-the-line-for-tony-gonzales.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        It May Finally Be the End of the Line for Tony Gonzales
+                    </a>
+                    <p class="summary">The embattled Texas congressman plans to drop his reelection bid after he admitted to an affair with a now-deceased staffer.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 01:00 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/the-day-israel-lost-america.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        The Day Israel Lost America
+                    </a>
+                    <p class="summary">The Iran war sure looks like a breaking point.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 12:00 PM</div>
+                    <a href="http://nymag.com/intelligencer/article/a-political-risk-gurus-biggest-worry-about-the-iran-war.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        A Political-Risk Guru’s Biggest Worry About Iran
+                    </a>
+                    <p class="summary">Ian Bremmer thinks President Trump learned some dangerously misguided lessons from Venezuela.</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 06, 11:00 AM</div>
+                    <a href="http://nymag.com/intelligencer/article/the-clintons-testified-about-epstein-will-trump-be-next.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener" class="headline-link">
+                        The Clintons Testified About Epstein. Will Trump Be Next?
+                    </a>
+                    <p class="summary">The committee shown a willingness to demand answers even from those in high places.</p>
+                </article>
+            </div>
+        </section>
+        <section class="pub-section" id="pub-7" style="display:none">
+            <div class="pub-header" style="--accent:#FFDB00">
+                <h2>Vox</h2>
+                <span class="article-count">10 stories · last 7 days</span>
+            </div>
+            <div class="articles">
+                
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 12:00 PM</div>
+                    <a href="https://www.vox.com/podcasts/481839/anxiety-depression-symptoms-causes-treatment-meaning" target="_blank" rel="noopener" class="headline-link">
+                        The logic of anxiety
+                    </a>
+                    <p class="summary">Anxiety is one of those words that means a hundred different things depending on who’s using it. A clinical disorder. A mood. A personality trait. A vague fe…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 11:30 AM</div>
+                    <a href="https://www.vox.com/life/481598/reddit-laundry-kismai-lipase-detergent-list-spa-day" target="_blank" rel="noopener" class="headline-link">
+                        The mysterious Redditor who’s changing the way we do laundry
+                    </a>
+                    <p class="summary">Here is what you need to know about the man known to hundreds of thousands of people as Kismai: Kismai is not his legal name; he is incapable of eating chees…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 11:15 AM</div>
+                    <a href="https://www.vox.com/future-perfect/481920/insect-bug-farming-industry-startup-bankruptcy" target="_blank" rel="noopener" class="headline-link">
+                        Bugs were supposed to be the future of food. Now, the insect farming industry is collapsing.
+                    </a>
+                    <p class="summary">“We have to get used to the idea of eating insects.” This proclamation came from, of all people, an insect researcher. Dutch entomologist Marcel Dicke pitche…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 11:00 AM</div>
+                    <a href="https://www.vox.com/podcasts/481955/trump-marco-rubio-cuba-regime-change-venezuela-iran" target="_blank" rel="noopener" class="headline-link">
+                        Is Trump coming for Cuba?
+                    </a>
+                    <p class="summary">We’re not even three months into 2026, and already it’s shaping up to be President Donald Trump’s year of regime change. He successfully removed Venezuelan P…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:30 AM</div>
+                    <a href="https://www.vox.com/health/481752/americas-vaccine-skepticism-is-starting-to-show-up-in-health-data" target="_blank" rel="noopener" class="headline-link">
+                        America’s vaccine skepticism is starting to show up in health data
+                    </a>
+                    <p class="summary">When a baby is born in a hospital in the US, one of the first things that happens — usually within 24 hours — is a hepatitis B shot, which prevents a virus t…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:15 AM</div>
+                    <a href="https://www.vox.com/advice/481697/post-breakup-finances-budget-subscriptions-bills" target="_blank" rel="noopener" class="headline-link">
+                        How to figure out your finances after a breakup
+                    </a>
+                    <p class="summary">Nobody tells you how expensive breaking up is. (Or maybe they did and I didn’t want to hear it.) Overnight, your expenses soar, your safety net vanishes, you…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 09, 10:00 AM</div>
+                    <a href="https://www.vox.com/politics/481880/iran-france-nuclear-deterrent" target="_blank" rel="noopener" class="headline-link">
+                        The dangerous lesson countries may take from the Iran war
+                    </a>
+                    <p class="summary">The landmark speech given by French President Emmanuel Macron last week — with a nuclear submarine serving as a dramatic backdrop — announcing the expansion …</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 12:00 PM</div>
+                    <a href="https://www.vox.com/future-perfect/481854/ssri-antidepressant-withdrawal-dependence-tapering" target="_blank" rel="noopener" class="headline-link">
+                        The honest conversation about antidepressants I wish my psychiatrist had with me
+                    </a>
+                    <p class="summary">If you’ve been taking antidepressants or anti-anxiety medications for years, you might have certain questions. Do you still need the medication? How would yo…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 11:00 AM</div>
+                    <a href="https://www.vox.com/podcasts/480888/americas-next-top-model-new-documentary-tyra-banks-legacy" target="_blank" rel="noopener" class="headline-link">
+                        Reckoning with America’s Next Top Model
+                    </a>
+                    <p class="summary">When America’s Next Top Model premiered in 2002, it was a juggernaut. The show was a part of a cohort of programming that built the foundations of reality te…</p>
+                </article>
+                <article class="headline-card">
+                    <div class="meta">Mar 08, 10:30 AM</div>
+                    <a href="https://www.vox.com/climate/481882/ocean-marine-climate-co2-carbon-removal-acidification" target="_blank" rel="noopener" class="headline-link">
+                        The case for scrubbing the seas to save the climate
+                    </a>
+                    <p class="summary">We’ve painted ourselves into a corner on climate change — our planet is going to exceed 1.5 degrees Celsius of warming. And while greenhouse gas emissions ar…</p>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        Updated Monday, March 09, 2026 — 08:06 PM · Headlines link to original publications
+    </footer>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.pub-section').forEach(s => s.style.display = 'none');
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.target).style.display = 'block';
+                document.getElementById('search').value = '';
+            });
+        });
+
+        // Search
+        document.getElementById('search').addEventListener('input', function() {
+            const q = this.value.toLowerCase().trim();
+            if (!q) {
+                // Restore tab view
+                const activeTarget = document.querySelector('.tab.active').dataset.target;
+                document.querySelectorAll('.pub-section').forEach(s => {
+                    s.style.display = s.id === activeTarget ? 'block' : 'none';
+                });
+                return;
+            }
+            // Show all sections while searching
+            document.querySelectorAll('.pub-section').forEach(s => s.style.display = 'block');
+            document.querySelectorAll('.headline-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(q) ? 'block' : 'none';
+            });
+        });
+    </script>
 </body>
 </html>
