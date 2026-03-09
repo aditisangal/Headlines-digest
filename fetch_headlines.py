@@ -27,10 +27,10 @@ FEEDS = [
         "color": "#D4001A"
     },
     {
-        "name": "New York Magazine",
-        "url": "https://feeds.feedburner.com/nymag/news",
-        "color": "#FF3A2F"
-    },
+       "name": "NYT Magazine",
+       "url": "https://rss.nytimes.com/services/xml/rss/nyt/Magazine.xml",
+       "color": "#FF3A2F"
+   },
     {
         "name": "The Cut",
         "url": "https://thecut.com/feed/rss.xml",
