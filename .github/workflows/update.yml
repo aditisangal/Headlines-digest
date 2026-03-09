@@ -1,0 +1,38 @@
+name: Update Headlines Dashboard
+
+on:
+  schedule:
+    # Runs every day at 6:00 AM UTC (2:00 AM ET / 11:00 PM PT)
+    # Change the time here if you want: https://crontab.guru
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allows you to run it manually from GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install feedparser
+
+      - name: Fetch headlines and rebuild dashboard
+        run: python fetch_headlines.py
+
+      - name: Commit and push updated dashboard
+        run: |
+          git config user.name "Headlines Bot"
+          git config user.email "headlines-bot@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "Update headlines $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
