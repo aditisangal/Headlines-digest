@@ -6,54 +6,17 @@ from pathlib import Path
 # ── Configuration ────────────────────────────────────────────────────────────
 
 FEEDS = [
-    {
-        "name": "The Atlantic",
-        "url": "https://www.theatlantic.com/feed/all/",
-        "color": "#C8102E"
-    },
-    {
-        "name": "The Economist",
-        "url": "https://www.economist.com/latest/rss.xml",
-        "color": "#E3120B"
-    },
-    {
-        "name": "New York Times",
-        "url": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
-        "color": "#000000"
-    },
-    {
-        "name": "The New Yorker",
-        "url": "https://www.newyorker.com/feed/everything",
-        "color": "#D4001A"
-    },
-    {
-       "name": "NYT Magazine",
-       "url": "https://rss.nytimes.com/services/xml/rss/nyt/Magazine.xml",
-       "color": "#FF3A2F"
-   },
-  {
-       "name": "n+1",
-       "url": "https://www.nplusonemag.com/feed/",
-       "color": "#FF6B6B"
-   },
-   {
-       "name": "Reason",
-       "url": "https://reason.com/feed/",
-       "color": "#003366"
-   },
-    {"name": "Wall Street Journal", "url": "https://feeds.content.dowjones.io/public/rss/RSSWorldNews", "color": "#0274B6", "abbr": "WSJ"},
-    {
-        "name": "Intelligencer",
-        "url": "https://feeds.feedburner.com/nymag/intelligencer",
-        "color": "#0057A8"
-    },
-    {
-        "name": "Vox",
-        "url": "https://www.vox.com/rss/index.xml",
-        "color": "#FFDB00"
-    },
+    {"name": "The Economist",   "url": "https://www.economist.com/latest/rss.xml",                           "color": "#E3120B", "abbr": "ECO"},
+    {"name": "The Atlantic",    "url": "https://www.theatlantic.com/feed/all/",                              "color": "#C8102E", "abbr": "ATL"},
+    {"name": "New York Times",  "url": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",          "color": "#222222", "abbr": "NYT"},
+    {"name": "Wall Street Journal", "url": "https://feeds.content.dowjones.io/public/rss/RSSWorldNews",      "color": "#0274B6", "abbr": "WSJ"},
+    {"name": "Intelligencer",   "url": "https://feeds.feedburner.com/nymag/intelligencer",                   "color": "#0057A8", "abbr": "INT"},
+    {"name": "The New Yorker",  "url": "https://www.newyorker.com/feed/everything",                          "color": "#D4001A", "abbr": "TNY"},
+    {"name": "Reason",          "url": "https://reason.com/feed/",                                           "color": "#003366", "abbr": "RSN"},
+    {"name": "NYT Magazine",    "url": "https://rss.nytimes.com/services/xml/rss/nyt/Magazine.xml",          "color": "#FF3A2F", "abbr": "MAG"},
+    {"name": "Vox",             "url": "https://www.vox.com/rss/index.xml",                                  "color": "#FFDB00", "abbr": "VOX"},
+    {"name": "n+1",             "url": "https://www.nplusonemag.com/feed/",                                  "color": "#FF6B6B", "abbr": "N+1"},
 ]
-
 KEEP_DAYS = 7  # How many days of headlines to retain
 
 # ── Fetch & Parse ────────────────────────────────────────────────────────────
