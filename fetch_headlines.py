@@ -85,7 +85,7 @@ def fetch_all():
 
 def generate_html(data):
     """Generate the full dashboard HTML."""
-    now = datetime.now().strftime("%A, %B %d, %Y — %I:%M %p")
+    now = datetime.now(__import__('zoneinfo').ZoneInfo('America/New_York')).strftime("%A, %B %d, %Y — %I:%M %p")
     total = sum(p["count"] for p in data)
 
     # Build publication nav tabs
