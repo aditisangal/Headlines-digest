@@ -142,7 +142,7 @@ def generate_html(data):
             for art in pub["articles"]:
                 articles_html += f"""
                 <article class="headline-card">
-                    <div class="meta">{art['date']}</div>
+            
                     <a href="{art['link']}" target="_blank" rel="noopener" class="headline-link">
                         {art['title']}
                     </a>
