@@ -91,7 +91,7 @@ def fetch_feed(feed_config):
                     "title": title,
                     "link": link,
                     "summary": summary,
-                    "date": pub_date.strftime("%b %d, %I:%M %p") if pub_date else "",
+                    "date": pub_date.strftime("%b %d") if pub_date else "",
                     "date_raw": pub_date.isoformat() if pub_date else "",
                 })
 
