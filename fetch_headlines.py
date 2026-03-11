@@ -41,6 +41,7 @@ FEEDS = [
        "url": "https://reason.com/feed/",
        "color": "#003366"
    },
+    {"name": "Wall Street Journal", "url": "https://feeds.content.dowjones.io/public/rss/RSSWorldNews", "color": "#0274B6", "abbr": "WSJ"},
     {
         "name": "Intelligencer",
         "url": "https://feeds.feedburner.com/nymag/intelligencer",
