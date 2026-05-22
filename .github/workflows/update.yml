@@ -2,9 +2,8 @@ name: Update Headlines Dashboard
 
 on:
   schedule:
-    # Runs every day at 6:00 AM UTC (2:00 AM ET / 11:00 PM PT)
-    # Change the time here if you want: https://crontab.guru
-    - cron: '0 6 * * *'
+    - cron: '0 11 * * *'  # 6:00 AM ET (UTC-5) / 7:00 AM ET (UTC-4 during daylight saving)
+    - cron: '0 19 * * *'  # 2:00 PM ET (UTC-5) / 3:00 PM ET (UTC-4 during daylight saving)
   workflow_dispatch: # Allows you to run it manually from GitHub
 
 permissions:
