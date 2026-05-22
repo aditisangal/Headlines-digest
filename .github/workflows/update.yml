@@ -22,16 +22,21 @@ jobs:
         with:
           python-version: '3.11'
 
+     # ... (keep your existing triggers and setup steps the same) ...
+
       - name: Install dependencies
-        run: pip install feedparser
+        run: pip install feedparser google-genai # Or 'openai', 'anthropic', etc.
 
       - name: Fetch headlines and rebuild dashboard
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
         run: python fetch_headlines.py
 
       - name: Commit and push updated dashboard
         run: |
           git config user.name "Headlines Bot"
           git config user.email "headlines-bot@users.noreply.github.com"
-          git add index.html
-          git diff --staged --quiet || git commit -m "Update headlines $(date -u '+%Y-%m-%d %H:%M UTC')"
+          # Track index.html AND the history file
+          git add index.html history.json 
+          git diff --staged --quiet || git commit -m "Update headlines and AI insights $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push
