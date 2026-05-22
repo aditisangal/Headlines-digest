@@ -1,243 +1,444 @@
 import feedparser
-import re
+import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
 FEEDS = [
-    {"name": "The Atlantic",    "url": "https://www.theatlantic.com/feed/all/",                              "color": "#C8102E", "abbr": "ATL"},
     {"name": "The Economist",   "url": "https://www.economist.com/latest/rss.xml",                           "color": "#E3120B", "abbr": "ECO"},
+    {"name": "The Atlantic",    "url": "https://www.theatlantic.com/feed/all/",                              "color": "#C8102E", "abbr": "ATL"},
     {"name": "New York Times",  "url": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",          "color": "#222222", "abbr": "NYT"},
-    {"name": "NYT Magazine",    "url": "https://rss.nytimes.com/services/xml/rss/nyt/Magazine.xml",          "color": "#FF3A2F", "abbr": "MAG"},
-    {"name": "The New Yorker",  "url": "https://www.newyorker.com/feed/everything",                          "color": "#D4001A", "abbr": "TNY"},
+    {"name": "Wall Street Journal", "url": "https://feeds.content.dowjones.io/public/rss/RSSWorldNews",      "color": "#0274B6", "abbr": "WSJ"},
     {"name": "Intelligencer",   "url": "https://feeds.feedburner.com/nymag/intelligencer",                   "color": "#0057A8", "abbr": "INT"},
-    {"name": "n+1",             "url": "https://www.nplusonemag.com/feed/",                                  "color": "#FF6B6B", "abbr": "N+1"},
-    {"name": "Vox",             "url": "https://www.vox.com/rss/index.xml",                                  "color": "#FFDB00", "abbr": "VOX"},
+    {"name": "The New Yorker",  "url": "https://www.newyorker.com/feed/everything",                          "color": "#D4001A", "abbr": "TNY"},
     {"name": "Reason",          "url": "https://reason.com/feed/",                                           "color": "#003366", "abbr": "RSN"},
+    {"name": "NYT Magazine",    "url": "https://rss.nytimes.com/services/xml/rss/nyt/Magazine.xml",          "color": "#FF3A2F", "abbr": "MAG"},
+    {"name": "Vox",             "url": "https://www.vox.com/rss/index.xml",                                  "color": "#FFDB00", "abbr": "VOX"},
+    {"name": "n+1",             "url": "https://www.nplusonemag.com/feed/",                                  "color": "#FF6B6B", "abbr": "N+1"},
 ]
+KEEP_DAYS = 7  # How many days of headlines to retain
 
-KEEP_DAYS = 7
-
-# ── Fetch ─────────────────────────────────────────────────────────────────────
+# ── Fetch & Parse ────────────────────────────────────────────────────────────
 
 def fetch_feed(feed_config):
+    """Fetch a single RSS feed and return cleaned articles from the last KEEP_DAYS days."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=KEEP_DAYS)
     articles = []
+
     try:
         parsed = feedparser.parse(feed_config["url"])
         for entry in parsed.entries:
+            # Try to get publish date
             pub_date = None
             if hasattr(entry, "published_parsed") and entry.published_parsed:
                 pub_date = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
             elif hasattr(entry, "updated_parsed") and entry.updated_parsed:
                 pub_date = datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc)
 
+            # Skip if older than cutoff
             if pub_date and pub_date < cutoff:
                 continue
 
             title = entry.get("title", "").strip()
-            link  = entry.get("link",  "").strip()
+            link = entry.get("link", "").strip()
+            summary = entry.get("summary", "").strip()
+
+            # Strip HTML tags from summary
+            import re
+            summary = re.sub(r"<[^>]+>", "", summary)
+            if len(summary) > 160:
+                summary = summary[:157] + "…"
 
             if title and link:
                 articles.append({
-                    "title":    title,
-                    "link":     link,
-                    "date":     pub_date.strftime("%b %d") if pub_date else "",
+                    "title": title,
+                    "link": link,
+                    "summary": summary,
+                    "date": pub_date.astimezone(__import__('zoneinfo').ZoneInfo('America/New_York')).strftime("%b %d, %I:%M %p") if pub_date else "",
                     "date_raw": pub_date.isoformat() if pub_date else "",
                 })
+
     except Exception as e:
-        print(f"  Failed to fetch {feed_config['name']}: {e}")
+        print(f"  ⚠ Failed to fetch {feed_config['name']}: {e}")
+
     return articles
 
 
 def fetch_all():
+    """Fetch all feeds and return structured data."""
     results = []
     for feed in FEEDS:
         print(f"  Fetching {feed['name']}...")
         articles = fetch_feed(feed)
-        print(f"    -> {len(articles)} articles")
-        results.append({**feed, "articles": articles, "count": len(articles)})
+        print(f"    → {len(articles)} articles")
+        results.append({
+            "name": feed["name"],
+            "color": feed["color"],
+            "articles": articles,
+            "count": len(articles),
+        })
     return results
 
 
-# ── HTML ──────────────────────────────────────────────────────────────────────
+# ── HTML Generation ──────────────────────────────────────────────────────────
 
 def generate_html(data):
-    now   = datetime.now().strftime("%A, %B %d, %Y")
+    """Generate the full dashboard HTML."""
+    now = datetime.now(__import__('zoneinfo').ZoneInfo('America/New_York')).strftime("%A, %B %d, %Y — %I:%M %p")
     total = sum(p["count"] for p in data)
 
-    all_articles = []
-    for pub in data:
-        for art in pub["articles"]:
-            all_articles.append({**art, "pub": pub["name"], "color": pub["color"], "abbr": pub["abbr"]})
+    # Build publication nav tabs
+    nav_tabs = ""
+    for i, pub in enumerate(data):
+        active = "active" if i == 0 else ""
+        nav_tabs += f"""<button class="tab {active}" data-target="pub-{i}" style="--accent:{pub['color']}">{pub['name']} <span class="count">{pub['count']}</span></button>\n"""
 
-    all_articles.sort(key=lambda x: x.get("date_raw", ""), reverse=True)
+    # Build publication sections
+    sections = ""
+    for i, pub in enumerate(data):
+        display = "block" if i == 0 else "none"
+        articles_html = ""
 
-    filter_btns = '<button class="filter-btn active" data-pub="all">All</button>\n'
-    for pub in data:
-        filter_btns += f'<button class="filter-btn" data-pub="{pub["name"]}" style="--c:{pub["color"]}">{pub["abbr"]}</button>\n'
+        if not pub["articles"]:
+            articles_html = '<p class="empty">No recent articles found.</p>'
+        else:
+            for art in pub["articles"]:
+                articles_html += f"""
+                <article class="headline-card">
+            
+                    <a href="{art['link']}" target="_blank" rel="noopener" class="headline-link">
+                        {art['title']}
+                    </a>
+                    {f'<p class="summary">{art["summary"]}</p>' if art["summary"] else ""}
+                </article>"""
 
-    tiles = ""
-    for art in all_articles:
-        title_escaped = art['title'].replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
-        tiles += f"""
-        <a class="tile" href="{art['link']}" target="_blank" rel="noopener"
-           data-pub="{art['pub']}" style="--accent:{art['color']}">
-            <div class="tile-inner">
-                <div class="tile-top">
-                    <span class="tile-abbr">{art['abbr']}</span>
-                    <span class="tile-date">{art['date']}</span>
-                </div>
-                <p class="tile-headline">{title_escaped}</p>
-                <div class="tile-bar"></div>
+        sections += f"""
+        <section class="pub-section" id="pub-{i}" style="display:{display}">
+            <div class="pub-header" style="--accent:{pub['color']}">
+                <h2>{pub['name']}</h2>
+                <span class="article-count">{pub['count']} stories · last 7 days</span>
             </div>
-        </a>"""
+            <div class="articles">
+                {articles_html}
+            </div>
+        </section>"""
 
-    return f"""<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Headlines</title>
+    <title>Headlines Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
         :root {{
-            --bg: #0f0f0f; --surface: #181818; --border: #282828;
-            --text: #efefef; --muted: #777; --dim: #444;
+            --bg: #0d0d0d;
+            --surface: #161616;
+            --surface2: #1e1e1e;
+            --border: #2a2a2a;
+            --text: #e8e6e1;
+            --text-muted: #888;
+            --text-dim: #555;
         }}
-        body {{ background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }}
 
-        .profile {{
-            max-width: 960px; margin: 0 auto; padding: 40px 20px 0;
-            display: flex; align-items: center; gap: 40px;
+        body {{
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-weight: 300;
+            min-height: 100vh;
         }}
-        .profile-avatar {{
-            width: 80px; height: 80px; border-radius: 50%;
-            background: linear-gradient(135deg, #C8102E, #0057A8, #FFDB00);
-            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-            font-family: 'Playfair Display', serif; font-size: 1.4rem; color: white; font-style: italic;
-        }}
-        .profile-info {{ flex: 1; }}
-        .profile-name {{ font-size: 1.3rem; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 10px; }}
-        .profile-stats {{ display: flex; gap: 28px; margin-bottom: 10px; }}
-        .stat-num {{ font-weight: 500; font-size: 1rem; display: block; }}
-        .stat-label {{ font-size: 0.72rem; color: var(--muted); font-family: 'DM Mono', monospace; }}
-        .profile-bio {{ font-size: 0.8rem; color: var(--muted); font-family: 'DM Mono', monospace; }}
 
-        .divider {{ max-width: 960px; margin: 28px auto 0; border: none; border-top: 1px solid var(--border); }}
-
-        .filters {{
-            max-width: 960px; margin: 0 auto; padding: 16px 20px;
-            display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+        /* ── Header ── */
+        header {{
+            border-bottom: 1px solid var(--border);
+            padding: 24px 24px 0;
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 100;
         }}
-        .filters::-webkit-scrollbar {{ display: none; }}
-        .filter-btn {{
-            background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
-            color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.7rem;
-            letter-spacing: 0.06em; padding: 5px 12px; cursor: pointer; white-space: nowrap;
-            transition: all 0.15s;
-        }}
-        .filter-btn:hover {{ color: var(--text); border-color: #555; }}
-        .filter-btn.active {{ background: var(--c, var(--text)); border-color: var(--c, var(--text)); color: white; }}
-        .filter-btn[data-pub="all"].active {{ background: var(--text); border-color: var(--text); color: var(--bg); }}
 
-        .search-wrap {{ max-width: 960px; margin: 0 auto; padding: 0 20px 16px; }}
+        .header-top {{
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }}
+
+        .masthead {{
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.4rem, 4vw, 2rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }}
+
+        .masthead span {{
+            color: var(--text-muted);
+            font-weight: 400;
+        }}
+
+        .dateline {{
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }}
+
+        .stats-bar {{
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }}
+
+        /* ── Tabs ── */
+        .tabs {{
+            display: flex;
+            gap: 2px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 0;
+            -webkit-overflow-scrolling: touch;
+        }}
+
+        .tabs::-webkit-scrollbar {{ display: none; }}
+
+        .tab {{
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 400;
+            padding: 10px 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            transition: color 0.15s, border-color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
+
+        .tab:hover {{ color: var(--text); }}
+
+        .tab.active {{
+            color: var(--text);
+            border-bottom-color: var(--accent);
+            font-weight: 500;
+        }}
+
+        .tab .count {{
+            background: var(--surface2);
+            border-radius: 10px;
+            font-size: 0.68rem;
+            padding: 1px 6px;
+            color: var(--text-dim);
+        }}
+
+        .tab.active .count {{
+            background: var(--accent);
+            color: white;
+        }}
+
+        /* ── Main Content ── */
+        main {{
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }}
+
+        /* ── Publication Section ── */
+        .pub-header {{
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+            padding: 28px 0 16px;
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+        }}
+
+        .pub-header h2 {{
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+        }}
+
+        .article-count {{
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: 'IBM Plex Mono', monospace;
+            letter-spacing: 0.03em;
+        }}
+
+        /* ── Headline Cards ── */
+        .headline-card {{
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+            animation: fadeIn 0.2s ease;
+        }}
+
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(4px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        .meta {{
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-dim);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }}
+
+        .headline-link {{
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1rem, 2.5vw, 1.15rem);
+            font-weight: 400;
+            line-height: 1.4;
+            color: var(--text);
+            text-decoration: none;
+            display: block;
+            transition: color 0.15s;
+        }}
+
+        .headline-link:hover {{
+            color: var(--accent, #aaa);
+        }}
+
+        .summary {{
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 6px;
+            font-weight: 300;
+        }}
+
+        .empty {{
+            color: var(--text-dim);
+            font-style: italic;
+            padding: 32px 0;
+            font-size: 0.9rem;
+        }}
+
+        /* ── Search ── */
+        .search-wrap {{
+            padding: 20px 0 0;
+        }}
+
         #search {{
-            width: 100%; background: var(--surface); border: 1px solid var(--border);
-            border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif;
-            font-size: 0.85rem; padding: 9px 14px; outline: none; transition: border-color 0.15s;
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.9rem;
+            padding: 10px 14px;
+            outline: none;
+            transition: border-color 0.15s;
         }}
+
         #search:focus {{ border-color: #555; }}
-        #search::placeholder {{ color: var(--dim); }}
+        #search::placeholder {{ color: var(--text-dim); }}
 
-        .grid {{
-            max-width: 960px; margin: 0 auto; padding: 2px 20px 80px;
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+        /* ── Footer ── */
+        footer {{
+            text-align: center;
+            padding: 40px 24px;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            font-family: 'IBM Plex Mono', monospace;
+            letter-spacing: 0.04em;
+            border-top: 1px solid var(--border);
         }}
 
-        .tile {{
-            aspect-ratio: 1 / 1; background: var(--surface); border: 1px solid var(--border);
-            text-decoration: none; color: var(--text); display: flex; overflow: hidden;
-            position: relative; transition: transform 0.15s, border-color 0.15s;
-        }}
-        .tile:hover {{ border-color: var(--accent); transform: scale(1.02); z-index: 2; }}
-        .tile-inner {{
-            padding: 12px; display: flex; flex-direction: column;
-            justify-content: space-between; width: 100%; height: 100%;
-        }}
-        .tile-top {{ display: flex; justify-content: space-between; align-items: center; }}
-        .tile-abbr {{ font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; color: var(--accent); }}
-        .tile-date {{ font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--dim); }}
-        .tile-headline {{
-            font-family: 'Playfair Display', serif; font-size: clamp(0.7rem, 1.4vw, 0.95rem);
-            font-weight: 700; line-height: 1.35; color: var(--text);
-            display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
-            overflow: hidden; flex: 1; margin: 8px 0;
-        }}
-        .tile-bar {{ height: 2px; background: var(--accent); border-radius: 1px; opacity: 0.6; }}
-        .tile.hidden {{ display: none; }}
-
+        /* ── Mobile ── */
         @media (max-width: 600px) {{
-            .profile {{ padding: 24px 16px 0; gap: 20px; }}
-            .profile-avatar {{ width: 60px; height: 60px; font-size: 1rem; }}
-            .grid {{ grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px 8px 60px; }}
-            .tile-inner {{ padding: 8px; }}
-            .tile-headline {{ font-size: 0.65rem; -webkit-line-clamp: 3; }}
-            .filters, .search-wrap {{ padding-left: 16px; padding-right: 16px; }}
+            header {{ padding: 16px 16px 0; }}
+            main {{ padding: 0 16px 60px; }}
+            .tab {{ padding: 10px 10px; font-size: 0.75rem; }}
         }}
     </style>
 </head>
 <body>
-    <div class="profile">
-        <div class="profile-avatar">H</div>
-        <div class="profile-info">
-            <div class="profile-name">headlines</div>
-            <div class="profile-stats">
-                <div class="stat"><span class="stat-num">{total}</span><span class="stat-label">stories</span></div>
-                <div class="stat"><span class="stat-num">{len(data)}</span><span class="stat-label">sources</span></div>
-                <div class="stat"><span class="stat-num">7d</span><span class="stat-label">window</span></div>
-            </div>
-            <div class="profile-bio">updated daily · {now}</div>
+    <header>
+        <div class="header-top">
+            <div class="masthead">Headlines <span>/ Daily</span></div>
+            <div class="dateline">{now}</div>
         </div>
-    </div>
-    <hr class="divider">
-    <div class="filters">{filter_btns}</div>
-    <div class="search-wrap"><input type="search" id="search" placeholder="Search headlines…" autocomplete="off"></div>
-    <div class="grid" id="grid">{tiles}</div>
+        <div class="stats-bar">{total} stories across {len(data)} publications · rolling 7 days</div>
+        <div class="tabs">
+            {nav_tabs}
+        </div>
+    </header>
+
+    <main>
+        <div class="search-wrap">
+            <input type="search" id="search" placeholder="Search headlines…" autocomplete="off">
+        </div>
+        {sections}
+    </main>
+
+    <footer>
+        Updated {now} · Headlines link to original publications
+    </footer>
+
     <script>
-        document.querySelectorAll('.filter-btn').forEach(btn => {{
-            btn.addEventListener('click', () => {{
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const pub = btn.dataset.pub;
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {{
+            tab.addEventListener('click', () => {{
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.pub-section').forEach(s => s.style.display = 'none');
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.target).style.display = 'block';
                 document.getElementById('search').value = '';
-                document.querySelectorAll('.tile').forEach(tile => {{
-                    tile.classList.toggle('hidden', pub !== 'all' && tile.dataset.pub !== pub);
-                }});
             }});
         }});
+
+        // Search
         document.getElementById('search').addEventListener('input', function() {{
             const q = this.value.toLowerCase().trim();
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('.filter-btn[data-pub="all"]').classList.add('active');
-            document.querySelectorAll('.tile').forEach(tile => {{
-                tile.classList.toggle('hidden', q ? !tile.textContent.toLowerCase().includes(q) : false);
+            if (!q) {{
+                // Restore tab view
+                const activeTarget = document.querySelector('.tab.active').dataset.target;
+                document.querySelectorAll('.pub-section').forEach(s => {{
+                    s.style.display = s.id === activeTarget ? 'block' : 'none';
+                }});
+                return;
+            }}
+            // Show all sections while searching
+            document.querySelectorAll('.pub-section').forEach(s => s.style.display = 'block');
+            document.querySelectorAll('.headline-card').forEach(card => {{
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(q) ? 'block' : 'none';
             }});
         }});
     </script>
 </body>
 </html>"""
 
+    return html
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+
+# ── Main ─────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     print("Fetching headlines...")
     data = fetch_all()
     print("Generating dashboard...")
     html = generate_html(data)
-    Path("index.html").write_text(html, encoding="utf-8")
-    print("Done.")
+    output_path = Path("index.html")
+    output_path.write_text(html, encoding="utf-8")
+    print(f"Done. Dashboard saved to {output_path}")
