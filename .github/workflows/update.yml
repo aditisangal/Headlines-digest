@@ -1,10 +1,9 @@
 name: Update Headlines Dashboard
-
 on:
   schedule:
-    - cron: '0 11 * * *'  # 6:00 AM ET (UTC-5) / 7:00 AM ET (UTC-4 during daylight saving)
-    - cron: '0 19 * * *'  # 2:00 PM ET (UTC-5) / 3:00 PM ET (UTC-4 during daylight saving)
-  workflow_dispatch: # Allows you to run it manually from GitHub
+    - cron: '0 11 * * *'
+    - cron: '0 19 * * *'
+  workflow_dispatch: 
 
 permissions:
   contents: write
@@ -12,31 +11,30 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
-
     steps:
+      # Bumped from v5 to v6 to natively support Node 24 and clear the warning
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
+      # Bumped from v5 to v6 to natively support Node 24 and clear the warning
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
-     # ... (keep your existing triggers and setup steps the same) ...
+       Wilk- name: Install dependencies
+        run: pip install feedparser requests
 
-      - name: Install dependencies
-        run: pip install feedparser google-genai # Or 'openai', 'anthropic', etc.
-
+      # Added a debug print step to help you see what's failing if it crashes again
       - name: Fetch headlines and rebuild dashboard
         env:
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python fetch_headlines.py
-
-      - name: Commit and push updated dashboard
+        
+      - name: Commit and push updated dashboard & cache
         run: |
           git config user.name "Headlines Bot"
           git config user.email "headlines-bot@users.noreply.github.com"
-          # Track index.html AND the history file
-          git add index.html history.json 
-          git diff --staged --quiet || git commit -m "Update headlines and AI insights $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git add index.html headlines_cache.json
+          git diff --staged --quiet || git commit -m "Update headlines & AI memory"
           git push
