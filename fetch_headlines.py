@@ -41,8 +41,9 @@ if os.path.exists(old_headlines_file):
 # 2. FETCH NEW HEADLINES
 new_data = {}
 feeds = {
-    "NYT": "[https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml](https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml)",
-    "BBC": "[https://feeds.bbci.co.uk/news/rss.xml](https://feeds.bbci.co.uk/news/rss.xml)"
+    "NYT": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+    "BBC": "https://feeds.bbci.co.uk/news/rss.xml",
+    "WSJ": "https://feeds.a.dj.com/rss/WSJVideoHomepage.xml"
 }
 
 for pub, url in feeds.items():
