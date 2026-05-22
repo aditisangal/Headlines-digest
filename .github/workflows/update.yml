@@ -1,9 +1,10 @@
 name: Update Headlines Dashboard
+
 on:
   schedule:
     - cron: '0 11 * * *'
     - cron: '0 19 * * *'
-  workflow_dispatch: 
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -12,29 +13,24 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      # Bumped from v5 to v6 to natively support Node 24 and clear the warning
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
 
-      # Bumped from v5 to v6 to natively support Node 24 and clear the warning
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-       Wilk- name: Install dependencies
-        run: pip install feedparser requests
+      - name: Install dependencies
+        run: pip install feedparser
 
-      # Added a debug print step to help you see what's failing if it crashes again
       - name: Fetch headlines and rebuild dashboard
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python fetch_headlines.py
-        
-      - name: Commit and push updated dashboard & cache
+
+      - name: Commit and push updated dashboard
         run: |
           git config user.name "Headlines Bot"
           git config user.email "headlines-bot@users.noreply.github.com"
-          git add index.html headlines_cache.json
-          git diff --staged --quiet || git commit -m "Update headlines & AI memory"
+          git add index.html
+          git diff --staged --quiet || git commit -m "Update headlines $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push
