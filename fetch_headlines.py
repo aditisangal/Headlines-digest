@@ -1,97 +1,65 @@
 import os
-import json
 import feedparser
-import requests
 
-# 1. LOAD OLD HEADLINES (Memory)
-old_headlines_file = "headlines_cache.json"
-old_data = {}
-if os.path.exists(old_headlines_file):
-    with open(old_headlines_file, "r") as f:
-        old_data = json.load(f)
-
-# 2. FETCH NEW HEADLINES
-new_data = {}
-feeds = {
-    "NYT": "https://rss.nytimes.comTo use Google Gemini via the `requests` library, you need to use the Google AI Studio endpoint. The structure is slightly different from OpenAI: the API key is passed as a URL parameter,/services/xml/rss/nyt/HomePage.xml",
-    "WSJ": "https://feeds.a.dj.com/rss/RSS and the payload uses a `contents` and `parts` hierarchy.
-
-### The Gemini Python Script
-This script uses `gemini-1.5-flash` (WorldNews.xml" 
-}
-
-for pub, url in feeds.items():
-    feed = feedparser.parse(url)
-    new_data[pub] = [entry.title for entry in feed.entries[:10]]
-
-# 3. GENERATE AI TOPLINE COMPARISON VIA GEMINI RESTwhich is fast and has a generous free tier) to analyze the news shift.
-```python
-import os
-import json
-import feedparser
-import requests
-
-# 1. LOAD OLD HEADLINES (Memory)
-old_headlines_file = "headlines_cache.json"
-old_data = {}
-if os.path.exists(old_headlines_file):
-    with open(old_headlines_file, "r") as f:
-        old_data = json.load(f)
-
-# 2. FETCH NEW HEADLINES
-new_data = {}
+# 1. DEFINE SECURE, STABLE FEEDS
 feeds = {
     "NYT": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
-    "BBC": "https://feeds.bbci.co.uk/news/rss.xml",
-    "WSJ": "https://feeds.a.dj.com/rss/WSJVideoHomepage.xml"
+    "BBC": "https://feeds.bbci.co.uk/news/rss.xml"
 }
 
+# 2. FETCH HEADLINES
+dashboard_data = {}
 for pub, url in feeds.items():
-    feed = feedparser.parse(url)
-    new_data[pub] = [entry.title for entry in feed.entries[:10]]
+    try:
+        feed = feedparser.parse(url)
+        # Safely grab titles, fallback to empty list if feed is down
+        dashboard_data[pub] = [entry.title for entry in feed.entries[:10]] if feed.entries else []
+    except Exception as e:
+        print(f"Warning: Could not parse {pub}: {e}")
+        dashboard_data[pub] = []
 
-# 3. GENERATE AI TOPLINE VIA GEMINI API
-api_key = os.environ.get("GEMINI_API_KEY")
-toplines = {}
+# 3. BUILD FRESH INDEX.HTML FROM SCRATCH
+html_content = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Headlines Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .pub-section { margin-bottom: 40px; }
+        h2 { color: #0066cc; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <h1>Live Headlines Dashboard</h1>
+"""
 
-if api_key:
-    # Google Gemini REST Endpoint
-    # Using gemini-1.5-flash for speed and cost-efficiency
-    model_id = "gemini-1.5-flash"
-    url = f"[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/){model_id}:generateContent?key={api_key}"
-    headers = {'Content-Type': 'application/json'}
+# Dynamically inject the parsed headings into the markup string
+for pub, headlines in dashboard_data.items():
+    html_content += f"<div class='pub-section'><h2>{pub}</h2>"
+    if headlines:
+        html_content += "<ul>"
+        for title in headlines:
+            # Clean quotes to ensure the HTML string doesn't break
+            safe_title = title.replace('"', '&quot;').replace("'", "&#39;")
+            html_content += f"<li>{safe_title}</li>"
+        html_content += "</ul>"
+    else:
+        html_content += "<p><em>No headlines available at this time.</em></p>"
+    html_content += "</div>"
 
-    for pub in new_data:
-        current_headlines = "\n".join(new_data[pub])
-        previous_headlines = "\n".join(old_data.get(pub, ["No previous data available."]))
-        
-        prompt_text = f"""
-        Compare the previous headlines for {pub} with the current ones.
-        Identify how the editorial focus or primary news story has shifted.
-        Write a single, punchy, one-sentence summary.
-        
-        PREVIOUS:
-        {previous_headlines}
-        
-        CURRENT:
-        {current_headlines}
-        """
+html_content += """
+</body>
+</html>
+"""
 
-        # Gemini's specific JSON structure
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt_text}]
-            }],
-            "generationConfig": {
-                "temperature": 0.2,
-                "topP": 0.8,
-                "maxOutputTokens": 100
-            }
-        }
+# Overwrite or create index.html right in the runner workspace
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
 
-        try:
-            response = requests.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            res_json = response.json()
-            
-            # Extract text from Gemini's nested response structure
+print("Success: index.html rebuilt perfectly.")
