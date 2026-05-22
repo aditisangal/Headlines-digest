@@ -2,9 +2,9 @@ name: Update Headlines Dashboard
 
 on:
   schedule:
-    - cron: '0 11 * * *'
-    - cron: '0 19 * * *'
-  workflow_dispatch:
+    - cron: '0 11 * * *'  # 6:00 AM ET (UTC-5) / 7:00 AM ET (UTC-4 during daylight saving)
+    - cron: '0 19 * * *'  # 2:00 PM ET (UTC-5) / 3:00 PM ET (UTC-4 during daylight saving)
+  workflow_dispatch: # Allows you to run it manually from GitHub
 
 permissions:
   contents: write
@@ -12,9 +12,10 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
