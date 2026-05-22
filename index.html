@@ -3,18 +3,3510 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Headlines Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+    <title>Headlines</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
     <style>
-        body { background: #0d0d0d; color: #888; font-family: 'IBM Plex Mono', monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
-        h1 { font-family: 'Playfair Display', serif; color: #e8e6e1; font-size: 2rem; margin-bottom: 16px; }
-        p { font-size: 0.8rem; line-height: 1.8; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #0f0f0f; --surface: #181818; --border: #282828;
+            --text: #efefef; --muted: #777; --dim: #444;
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+        .profile {
+            max-width: 960px; margin: 0 auto; padding: 40px 20px 0;
+            display: flex; align-items: center; gap: 40px;
+        }
+        .profile-avatar {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg, #C8102E, #0057A8, #FFDB00);
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+            font-family: 'Playfair Display', serif; font-size: 1.4rem; color: white; font-style: italic;
+        }
+        .profile-info { flex: 1; }
+        .profile-name { font-size: 1.3rem; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 10px; }
+        .profile-stats { display: flex; gap: 28px; margin-bottom: 10px; }
+        .stat-num { font-weight: 500; font-size: 1rem; display: block; }
+        .stat-label { font-size: 0.72rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+        .profile-bio { font-size: 0.8rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+        .divider { max-width: 960px; margin: 28px auto 0; border: none; border-top: 1px solid var(--border); }
+
+        .filters {
+            max-width: 960px; margin: 0 auto; padding: 16px 20px;
+            display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+        }
+        .filters::-webkit-scrollbar { display: none; }
+        .filter-btn {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+            color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.7rem;
+            letter-spacing: 0.06em; padding: 5px 12px; cursor: pointer; white-space: nowrap;
+            transition: all 0.15s;
+        }
+        .filter-btn:hover { color: var(--text); border-color: #555; }
+        .filter-btn.active { background: var(--c, var(--text)); border-color: var(--c, var(--text)); color: white; }
+        .filter-btn[data-pub="all"].active { background: var(--text); border-color: var(--text); color: var(--bg); }
+
+        .search-wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 16px; }
+        #search {
+            width: 100%; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem; padding: 9px 14px; outline: none; transition: border-color 0.15s;
+        }
+        #search:focus { border-color: #555; }
+        #search::placeholder { color: var(--dim); }
+
+        .grid {
+            max-width: 960px; margin: 0 auto; padding: 2px 20px 80px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+        }
+
+        .tile {
+            aspect-ratio: 1 / 1; background: var(--surface); border: 1px solid var(--border);
+            text-decoration: none; color: var(--text); display: flex; overflow: hidden;
+            position: relative; transition: transform 0.15s, border-color 0.15s;
+        }
+        .tile:hover { border-color: var(--accent); transform: scale(1.02); z-index: 2; }
+        .tile-inner {
+            padding: 12px; display: flex; flex-direction: column;
+            justify-content: space-between; width: 100%; height: 100%;
+        }
+        .tile-top { display: flex; justify-content: space-between; align-items: center; }
+        .tile-abbr { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; color: var(--accent); }
+        .tile-date { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--dim); }
+        .tile-headline {
+            font-family: 'Playfair Display', serif; font-size: clamp(0.7rem, 1.4vw, 0.95rem);
+            font-weight: 700; line-height: 1.35; color: var(--text);
+            display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+            overflow: hidden; flex: 1; margin: 8px 0;
+        }
+        .tile-bar { height: 2px; background: var(--accent); border-radius: 1px; opacity: 0.6; }
+        .tile.hidden { display: none; }
+
+        @media (max-width: 600px) {
+            .profile { padding: 24px 16px 0; gap: 20px; }
+            .profile-avatar { width: 60px; height: 60px; font-size: 1rem; }
+            .grid { grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px 8px 60px; }
+            .tile-inner { padding: 8px; }
+            .tile-headline { font-size: 0.65rem; -webkit-line-clamp: 3; }
+            .filters, .search-wrap { padding-left: 16px; padding-right: 16px; }
+        }
     </style>
 </head>
 <body>
-    <div>
-        <h1>Headlines Dashboard</h1>
-        <p>Dashboard is being set up.<br>It will populate automatically on first run.</p>
+    <div class="profile">
+        <div class="profile-avatar">H</div>
+        <div class="profile-info">
+            <div class="profile-name">headlines</div>
+            <div class="profile-stats">
+                <div class="stat"><span class="stat-num">306</span><span class="stat-label">stories</span></div>
+                <div class="stat"><span class="stat-num">9</span><span class="stat-label">sources</span></div>
+                <div class="stat"><span class="stat-num">7d</span><span class="stat-label">window</span></div>
+            </div>
+            <div class="profile-bio">updated daily · Friday, May 22, 2026</div>
+        </div>
     </div>
+    <hr class="divider">
+    <div class="filters"><button class="filter-btn active" data-pub="all">All</button>
+<button class="filter-btn" data-pub="The Atlantic" style="--c:#C8102E">ATL</button>
+<button class="filter-btn" data-pub="The Economist" style="--c:#E3120B">ECO</button>
+<button class="filter-btn" data-pub="New York Times" style="--c:#222222">NYT</button>
+<button class="filter-btn" data-pub="NYT Magazine" style="--c:#FF3A2F">MAG</button>
+<button class="filter-btn" data-pub="The New Yorker" style="--c:#D4001A">TNY</button>
+<button class="filter-btn" data-pub="Intelligencer" style="--c:#0057A8">INT</button>
+<button class="filter-btn" data-pub="n+1" style="--c:#FF6B6B">N+1</button>
+<button class="filter-btn" data-pub="Vox" style="--c:#FFDB00">VOX</button>
+<button class="filter-btn" data-pub="Reason" style="--c:#003366">RSN</button>
+</div>
+    <div class="search-wrap"><input type="search" id="search" placeholder="Search headlines…" autocomplete="off"></div>
+    <div class="grid" id="grid">
+        <a class="tile" href="https://www.newyorker.com/podcast/the-new-yorker-radio-hour/a-fema-insider-says-morale-has-never-been-lower-at-the-embattled-agency" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">A FEMA Insider Says Morale Has Never Been Lower at the Embattled Agency</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/the-new-yorker-interview/dana-white-thinks-everyones-a-fighter" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Dana White Thinks Everyone’s a Fighter</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/technology/google-appeals-search-case.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Google Appeals Landmark Ruling Declaring It a Monopolist in Search</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/us/ebola-american-doctor-peter-stafford.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">American Doctor With Ebola Says He Is ‘Optimistic’ for Recovery</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/culture/2026/05/trump-smithsonian-women/687265/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">How Trump’s Culture War Derailed a New Smithsonian Museum</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/nyregion/mahmoud-khalil-supreme-court.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Mahmoud Khalil to Appeal to Supreme Court in Effort to Halt Deportation</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/21/books/summer-reading-sweepstakes-form.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Submit Your Summer Reading Bucket List</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/culture/2026/05/the-sheep-detectives-movie-review/687273/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The Private Eyes That Made Me Cry</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/newsletters/2026/05/books-briefing-surprising-lesson-granta-controversy-ai/687277/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The Surprising Lesson of the &lt;em&gt;Granta&lt;/em&gt; Controversy</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/world/middleeast/iran-ceasefire-us-qatar-pakistan.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Regional Mediators Rush to Save U.S.-Iran Cease-Fire</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/opinion/stephen-colbert-youtube-corporate-media.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Stephen Colbert’s Finale Didn’t Mean What It Seemed To</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/business/oil-stocks-bonds-gas.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Stocks and Oil Prices Tick Up Amid Impasse Over Reopening Strait of Hormuz</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/nyregion/mamdani-jews-relationship.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Disconnect Widens Between Mamdani and Pro-Israel Jewish Leaders</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/us/politics/kevin-warsh-federal-reserve-swearing-in.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Warsh Takes Charge of Fed Facing Rising Inflation Threat</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/us/politics/wasserman-schultz-redistricting.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Wasserman Schultz Will Run in Majority-Black District in South Florida</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/podcasts/2026/05/how-dropout-cracked-internet-comedy/687264/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">How Dropout Cracked Internet Comedy</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/ideas/2026/05/flotilla-ben-gvir-israel-video/687263/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Israel’s Human Wrecking Ball</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/california-governors-race-is-turning-into-a-three-way-fight.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">California Governor’s Race Is Turning Into a Three-Way Fight</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/jpmorgan-sex-slave-saga-takes-another-twist.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">JPMorgan ‘Sex Slave’ Saga Takes Another Twist</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/war-powers-vote-is-the-latest-embarrassment-for-house-speaker-mike-johnson/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">War Powers Vote Is the Latest Embarrassment for House Speaker Mike Johnson</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/21/us/san-diego-mosque-shooter-guns.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">San Diego Mosque Shooter So Alarmed Police, They Seized Father’s Guns</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/cartoons/daily-cartoon/friday-may-22nd-alien-commencement-address" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Daily Cartoon: Friday, May 22nd</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/19/well/ebola-bundibugyo-virus-symptoms.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Ebola Outbreak: What to Know About Bundibugyo Virus Symptoms and Spread</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/us/politics/howard-lutnick-donation-house-republicans.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Lutnick Donated $5 Million to House Republicans Before Epstein Testimony</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/science-and-technology/2026/05/22/you-probably-dont-need-extra-electrolytes" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">You probably don’t need extra electrolytes</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/us/politics/trump-fund-irs-fact-check.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Fact-Checking the Trump Administration’s Inaccurate Claims About the $1.8 Billion Fund</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/podcast/2026/05/22/should-billionaires-pay-more-taxes/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Should Billionaires Pay More Taxes?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/opinion/ai-job-crisis-goldman-sachs.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">A.I. Is a Job Creator</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/politics/2026/05/ken-paxton-texas/687256/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Ken Paxton Is Actually Doing This</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/22/the-campaign-in-maine" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The campaign in Maine</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/democrats-tried-to-bury-2024-election-autopsy/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Democrats Tried To Bury 2024 Election Autopsy</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/21/us/san-diego-mosque-shooting-funeral.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">‘They Protected You Guys’: Mourners Honor Heroes in Mosque Shooting</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/culture/2026/05/22/what-to-watch-this-week" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">What to watch this week</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/world/africa/ebola-south-sudan-congo.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">On the Ground in South Sudan: Why Akobo Faces an Ebola Risk</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/trumps-anti-weaponization-fund-is-built-on-a-contradiction/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Trump's 'Anti-Weaponization Fund' Is Built on a Contradiction</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/in-gerrymandering-fight-democracy-is-losing/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">In Gerrymandering Fight, Democracy Is Losing</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/who-abuses-food-delivery/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Who Abuses Food Delivery?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/arts/television/colbert-last-late-show.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Stephen Colbert’s Last ‘Late Show’: Laughing Well Is the Best Revenge</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/can-trumps-brazen-weaponization-slush-fund-be-stopped.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Trump’s Weaponization Slush Fund Is ‘Completely Insane’</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/your-money/preapproved-plans-houses-cost.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">An Option That Can Help Cut Housing Prices Catches On</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/photography/2026/05/photos-week-chief-mouser-pet-gala-soapbox-race/687250/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Photos of the Week: Chief Mouser, Pet Gala, Soapbox Race</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/arts/television/stephen-colbert-series-finale.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Stephen Colbert’s Last ‘Late Show’ Features Famous Friends and Paul McCartney</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/travel/electic-hybrid-car-rental-gas-prices.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">With Gas Prices Through the Roof, Will Renting an EV or Hybrid Car Save You Money?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/culture/2026/05/stephen-colbert-the-late-show-finale/687262/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The Goodbye Stephen Colbert Wanted to Say</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/europe/2026/05/22/a-turkish-court-ousts-the-opposition-leader-from-his-job" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">A Turkish court ousts the opposition leader from his job</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/22/law-school-recommended-against-students-bar-admission-partly-for-alleged-celebration-of-charlie-kirk-assassination-in-law-school-clinic/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Law School Recommended Against Student's Bar Admission, Partly for Alleged &quot;Celebration&quot; of Charlie Kirk Assassination in Law School Clinic</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/future-perfect/489307/ray-nayler-palaces-crow-profile" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">What we see when we look into the eyes of a bird</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/culture/2026/05/trump-reflecting-pool/687258/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Donald Trump’s Paint Jobs</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/the-republican-party-is-nothing-more-than-a-cult-of-trump/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The Republican Party Is Nothing More Than a Cult of Trump</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/22/today-in-supreme-court-history-may-22-1807-7/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Today in Supreme Court History: May 22, 1807</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/ideas/2026/05/ebola-hantavirus-trump-cdc-who/687259/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">What the Trump Administration Needs to Do to Contain the Ebola Outbreak</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/ideas/2026/05/minimum-wage-experiment-worked/687255/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The Economic Experiment That Upended Reality</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/politics/2026/05/aoc-marjorie-taylor-greene/687254/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Two Futures for the American Left</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/podcasts/488621/democrats-climate-change-progressive-candidates-green-new-deal-matt-huber" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The best thing Democrats can do for the climate: Stop talking about it</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/22/big-boosts-to-fill-spacexs-giant-ipo" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Big boosts to fill: SpaceX’s giant IPO</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/upshot/poll-democrats-times-siena.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Poll Suggests a Possible Path Forward for Democrats</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/world/asia/taliban-child-marriage-afghanistan.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">New Taliban Decree on Divorce Formalizes Child Marriage in Afghanistan, U.N. Warns</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/war-machine-2/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Review: A Sci-Fi War Movie About the Pentagon's Inscrutable Budget</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/politics/489493/dnc-autopsy-democrats-2026-strategy" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Democrats don&#8217;t need an autopsy to know what they did wrong</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/briefing/get-ready-to-grill.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Get Ready to Grill</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/culture/489467/okc-thunder-sga-flopping-fouls-2026-nba-playoffs-spurs" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">How the Oklahoma City Thunder became the NBA’s villains</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/on-censorship/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Review: A Victim of Chinese Authoritarianism Explains Censorship and Surveillance</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/06/01/i-love-boosters-movie-review" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">“I Love Boosters,” Reviewed: A Socialist-Surrealist Shoplifting Fantasy</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/goings-on/summer-culture-preview-2026" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Summer Culture Preview</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/the-lede/how-good-is-this-world-cup-squad-really" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">How Good Is This World Cup Squad, Really?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/open-questions/why-is-it-so-hard-to-be-ordinary" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Why Is It So Hard to Be Ordinary?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/in-brief/2026/05/22/the-us-in-brief-senate-republicans-defy-trump" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The US in Brief: Senate Republicans defy Trump</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/travel/memorial-day-flights-rental-car-gas-prices.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Memorial Day Travel Forecast: Gas Prices, Traffic and Flights</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/weather/memorial-day-weather-forecast-summer.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Memorial Day Forecast: Weather Will Be Wet and Cool For Much of the U.S.</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/world/middleeast/settler-attack-dog-west-bank.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">In West Bank, Latest Victim of Israeli Settler Violence Shocks in a New Way</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/magazine/voting-rights-act-reconstruction-civil-rights-redistricting.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The Civil Rights Era Is Collapsing Before Our Eyes</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/magazine/voting-rights-act-reconstruction-civil-rights-redistricting.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">The Civil Rights Era Is Collapsing Before Our Eyes</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/how-a-joke-helped-ken-paxton-win-trumps-endorsement.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Ken Paxton’s Campaign May Have Been Saved by a Staffer’s Joke</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/louisiana-v-callais-belongs-in-supreme-courts-anti-canon.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Louisiana v. Callais Belongs in the Supreme Court’s Anti-canon</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/22/books/review/mac-barnett-make-believe-young-peoples-literature.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Mac Barnett Faces Blowback for His Criticism of Children’s Books</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/22/brickbat-follow-you-home/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Brickbat: Follow You Home</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/22/open-thread-212/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Open Thread</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/22/did-justice-alito-lose-the-majority-opinion-in-hamm-v-smith/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Did Justice Alito Lose The Majority Opinion In Hamm v. Smith?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/21/world/middleeast/iran-strait-of-hormuz-tolls.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Iran and Oman in Talks Over Strait of Hormuz Ship Payment System</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/21/video-of-my-bruno-leoni-institute-milan-talk-on-the-supreme-court-tariff-decision-and-its-implications/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 22</span>
+                </div>
+                <p class="tile-headline">Video of my Bruno Leoni Institute (Milan) Talk on the Supreme Court Tariff Decision and its Implications</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/21/us/politics/senate-republicans-trump.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">In a Rarity, Republicans Stand Up to Trump</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/21/us/iran-war-powers-trump-measure.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">GOP Pulls Measure on Trump’s War Powers in Iran, Lacking Votes to Defeat It</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/newsletters/2026/05/trump-child-savings-accounts/687261/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">What’s Behind the New Trump Child-Savings Accounts</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/the-logoff-newsletter-trump/489564/trump-triumphal-arch-washington-dc-arlington-building-spree" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">How Trump plans to build his arch</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/podcast/2026/05/21/thomas-massie-falls-samurai-vs-squatters-jeff-bezos/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Thomas Massie Falls, 'Samurai vs. Squatters,' Jeff Bezos</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/ideas/2026/05/donald-trump-jr-wedding-trump-speech/687260/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">A Close Reading of Trump’s Statement on Attending His Son’s Wedding</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/minnesota-law-banning-prediction-markets-creates-victimless-crime/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Minnesota Law Banning Prediction Markets Creates Victimless Crime</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/06/01/singing-the-knicks-praises-with-a-dash-of-metal" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Singing the Knicks’ Praises, with a Dash of Metal</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/60-of-harvard-grades-were-as-in-2025-now-the-school-is-fighting-grade-inflation/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">60% of Harvard Grades Were A's in 2025. Now the School Is Fighting Grade Inflation.</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/elon-musk-spacex-ipo-elon-musk-revelations.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">SpaceX Warns Humans May Suffer ‘Same Fate As Dinosaurs’ in Eye-Popping IPO Pitch</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/why-does-trump-keep-bringing-up-decades-old-foreign-grievances/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Why Does Trump Keep Bringing Up Decades-Old Foreign Grievances?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/21/no-pseudonymity-for-parent-suing-over-school-vaccination-mandate/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">No Pseudonymity for Parent Suing Over School Vaccination Mandate</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/senate-gop-turns-on-trump-freezes-ice-bill.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Senate GOP Turns on Trump, Freezes ICE Bill</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/international/2026/05/trump-surrender-iran-endgame/687252/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Trump’s Endgame Is Surrender</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/the-1-776-billion-in-trumps-anti-weaponization-fund-fits-a-pattern-of-fanciful-figures/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The $1.776 Billion in Trump's 'Anti-Weaponization Fund' Fits a Pattern of Fanciful Figures</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/good-medicine-newsletter/489324/pancreatic-cancer-treatment-survival-cause-cure" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The worst kind of cancer suddenly isn’t so scary anymore</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/autopsy-report-shows-democrats-really-are-in-disarray.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Autopsy Report Shows Democrats Really Are in Disarray</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/21/485k-settlement-in-government-employee-speech-case-stemming-from-comments-about-charlie-kirks-death/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">$485K Settlement in Government Employee Speech Case Stemming from Comments About Charlie Kirk's Death</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/lawsuits-accuse-corporate-cartel-of-monopolizing-missouris-weed-market/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Lawsuits Accuse Corporate 'Cartel' of Monopolizing Missouri's Weed Market</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/politics/489393/supreme-court-hamm-smith-death-penalty" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The Supreme Court hands a rare victory to a death row inmate</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/21/lawsuit-against-virginia-tech-alleging-anti-male-bias-in-title-ix-proceedings-can-go-forward-in-part/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Lawsuit Against Virginia Tech Alleging Anti-Male Bias in Title IX Proceedings Can Go Forward in Part</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/trump-skip-don-jr-wedding-reason.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Trump Gives Absurd Reason for Skipping Don Jr.’s Wedding</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/newsletters/2026/05/handshakes-fist-bump-greetings-germs/687251/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Will Americans Ever Lose Their Grip on the Handshake?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/the-supreme-court-protected-donor-privacy-the-irs-didnt-get-the-memo/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The Supreme Court Protected Donor Privacy. The IRS Didn't Get the Memo.</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/trumps-corruption-is-brazen-obvious-and-costly-will-enough-republicans-try-to-stop-him/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Trump's Corruption Is Brazen, Obvious, and Costly. Will Enough Republicans Try To Stop Him?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/politics/2026/05/dhs-ice-sanctuary-cities-airports/687245/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Homeland Security’s Plan to Squeeze International Flights</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/an-ice-detainee-died-from-a-tooth-infection-autopsy-report-says/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">An ICE Detainee Died from a Tooth Infection, Autopsy Report Says</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/culture/2026/05/trump-triumphal-arches/687248/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Trump Is Missing the Entire Point of Arches</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/21/can-anything-stop-south-koreas-bull-run" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Can anything stop South Korea’s bull run?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/is-the-dhs-tracking-ice-critics-the-public-deserves-answers/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Is the DHS Tracking ICE Critics? The Public Deserves Answers.</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/asia/2026/05/21/essential-india-newsletter-introducing-ashoka-our-new-column" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Essential India newsletter: Introducing Ashoka, our new column</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/trumps-approval-rating-is-cratering-tariffs-are-a-big-reason-why/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Trump's Approval Rating Is Cratering. Tariffs Are a Big Reason Why.</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/health/2026/05/us-global-vaccination/687247/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The U.S.’s Most Concerning Anti-Vaccine Policy</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/the-race-to-be-the-face-of-manhattan-is-extremely-tight.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The Race to Be the Face of Manhattan Is Extremely Tight</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/ideas/2026/05/doj-conspiracy-theorists-trump/687246/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">A Department of Justice for an Age of Conspiracy Theories</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/cartoons/daily-cartoon/thursday-may-21st-kong-colbert-finale" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Daily Cartoon: Thursday, May 21st</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/hunter-biden-and-candace-owens-are-bffs-now/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Hunter Biden and Candace Owens Are BFFs Now</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/bankrolling-the-nation/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Bankrolling the Nation</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/podcasts/2026/05/higher-education-college-crisis/687233/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Colleges Are at a Breaking Point</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/obituary/2026/05/21/edith-eger-danced-for-josef-mengele" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Edith Eger danced for Josef Mengele</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/economic-and-financial-indicators/2026/05/21/economic-data-commodities-and-markets" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Economic data, commodities and markets</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/culture/2026/05/21/the-unlikely-inspiration-for-north-koreas-first-dictator" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The unlikely inspiration for North Korea’s first dictator</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/culture/2026/05/21/not-all-jews-believed-their-future-lay-in-israel" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Not all Jews believed their future lay in Israel</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/culture/2026/05/21/beware-the-typo-and-other-lessons-of-literary-history" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Beware the typo—and other lessons of literary history</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/culture/2026/05/21/a-blind-tasting-revolutionised-the-wine-world-50-years-ago" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">A blind tasting revolutionised the wine world 50 years ago</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/science-and-technology/2026/05/21/could-microscopic-spheres-of-silica-help-cool-the-planet" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Could microscopic spheres of silica help cool the planet?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/business/2026/05/21/why-you-should-almost-always-look-on-the-bright-side-of-life" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Why you should (almost) always look on the bright side of life</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/business/2026/05/21/can-an-italian-company-disrupt-germanys-broken-railway-industry" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Can an Italian company disrupt Germany’s broken railway industry?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/business/2026/05/21/a-new-mega-deal-shows-how-ai-has-turned-utilities-into-hot-property" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">A new mega-deal shows how AI has turned utilities into hot property</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/business/2026/05/21/how-star-wars-went-from-space-opera-to-soap-opera" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">How Star Wars went from space opera to soap opera</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/business/2026/05/21/the-strange-fate-of-hard-rock-cafe" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The strange fate of Hard Rock Cafe</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/international/2026/05/21/home-schooling-is-taking-off" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Home-schooling is taking off</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/china/2026/05/21/what-china-can-learn-from-japan-about-escaping-deflation" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">What China can learn from Japan about escaping deflation</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/asia/2026/05/21/overseas-chinese-risk-losing-their-oldest-institutions" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Overseas Chinese risk losing their oldest institutions</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/asia/2026/05/21/why-japan-and-china-will-struggle-to-end-their-feud" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Why Japan and China will struggle to end their feud</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/the-americas/2026/05/21/why-brazils-government-is-obsessed-with-vaccines" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Why Brazil’s government is obsessed with vaccines</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/the-americas/2026/05/21/months-after-electing-a-centrist-president-bolivia-boils-over" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Months after electing a centrist president, Bolivia boils over</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/middle-east-and-africa/2026/05/21/donald-trump-is-still-looking-for-a-quick-fix-in-iran" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Donald Trump is still looking for a quick fix in Iran</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/middle-east-and-africa/2026/05/21/the-mother-of-the-world-v-the-upstart" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The mother of the world v the upstart</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/middle-east-and-africa/2026/05/21/israels-economy-is-booming" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Israel’s economy is booming</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/united-states/2026/05/21/leftist-populisms-next-big-test" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Leftist populism’s next big test</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/united-states/2026/05/21/europes-first-known-language-is-alive-in-americas-west" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Europe’s first known language is alive in America’s West</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/united-states/2026/05/21/democratic-primary-voters-chose-a-dicey-candidate-for-georgia-governor" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Democratic primary voters chose a dicey candidate for Georgia governor</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/europe/2026/05/21/bre-entry-may-be-the-next-drama-to-grip-the-european-union" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Bre-entry may be the next drama to grip the European Union</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/united-states/2026/05/21/americas-sermons-are-becoming-op-eds" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">America’s sermons are becoming op-eds</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/europe/2026/05/21/how-europe-is-fighting-for-digital-sovereignty" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">How Europe is fighting for digital sovereignty</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/europe/2026/05/21/real-madrids-boss-calls-an-election" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Real Madrid’s boss calls an election</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/britain/2026/05/21/hate-labour-vote-labour" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Hate Labour? Vote Labour!</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/britain/2026/05/21/labours-battle-for-ideas-is-a-skirmish-over-small-differences" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Labour’s “battle for ideas” is a skirmish over small differences</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/britain/2026/05/21/britains-second-biggest-city-goes-from-dysfunctional-to-worse" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Britain’s second-biggest city goes from dysfunctional to worse</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/britain/2026/05/21/why-football-attendance-is-booming-outside-the-premier-league" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Why football attendance is booming outside the Premier League</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/britain/2026/05/21/the-legal-case-hanging-over-man-city-and-the-premier-league" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The legal case hanging over Man City and the Premier League</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/by-invitation/2026/05/21/the-ipo-wave-will-enshrine-the-ai-gods-control-over-the-future" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The IPO wave will enshrine the AI gods’ control over the future</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/letters/2026/05/21/do-most-baristas-in-norway-have-a-masters-degree" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Do most baristas in Norway have a master’s degree?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/leaders/2026/05/21/lessons-from-the-premier-league-for-britains-next-premier" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Lessons from the Premier League for Britain’s next premier</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/leaders/2026/05/21/how-to-stop-the-ebola-outbreak" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">How to stop the Ebola outbreak</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/the-world-this-week/2026/05/21/business" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Business</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/the-world-this-week/2026/05/21/the-weekly-cartoon" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The weekly cartoon</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/the-world-this-week/2026/05/21/politics" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Politics</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/culture/2026/05/naacp-college-sports-sec-gerrymandering/687240/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Hit Them Where It Hurts</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/interactive/1843/2026/05/21/dope-and-glory-inside-the-enhanced-games" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Dope and glory: inside the Enhanced Games</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/books/2026/05/granta-ai-fiction-book-scandal-changes-everything/687243/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">This Literary AI Scandal Changes Everything</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/21/racial-slurs-as-actionable-intentional-infliction-of-emotional-distress/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Racial Slurs as Actionable Intentional Infliction of Emotional Distress</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/podcasts/489070/national-parks-trump-administration-budget-cuts-science-yosemite-glacier-acadia" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Our national parks are struggling</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/21/today-in-supreme-court-history-may-21-2007-7/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Today in Supreme Court History: May 21, 2007</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/scotus-term-limits-may-be-a-good-idea-but-they-still-require-a-constitutional-amendment/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">SCOTUS Term Limits May Be a Good Idea. But They Still Require a Constitutional Amendment.</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/mamdani-nyc-budget-hochul.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Mamdani Puts Off the Pain — for Now</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/ideas/2026/05/synagogue-terrorism-vandalism-antisemitism/687241/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The New Blood Libel</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.theatlantic.com/culture/2026/05/typo-ai-trend-human/687237/?utm_source=feed" target="_blank" rel="noopener"
+           data-pub="The Atlantic" style="--accent:#C8102E">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ATL</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The Typo Vibe Shift</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/briefing/2026/05/21/elon-musk-is-going-all-in-on-an-unproven-technology" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Elon Musk is going all-in on an unproven technology</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/politics/489191/chatgpt-claude-china-bias-ai" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The hidden way dictatorships are shaping what AI tells you</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/21/the-peking-order-xi-meets-putin-after-trump" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The Peking order: Xi meets Putin after Trump</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/beware-the-blob-of-federal-police/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">It's Not Just ICE Stockpiling Weapons—the IRS, EPA, and Other Feds Are Arming Up Too</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/humor/shouts-murmurs/updated-birdsong-mnemonics-for-donald-trumps-america" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Updated Birdsong Mnemonics for Donald Trump’s America</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/letter-from-beirut/the-missing-bride-of-anqoun" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The Missing Bride of Anqoun</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/the-lede/clarence-thomas-against-progressivism-and-progressives" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Clarence Thomas Against Progressivism—and Progressives</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/06/01/othello-theatre-review-well-ill-let-you-go" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The Fear Driving “Well, I’ll Let You Go” and “Othello”</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/podcast/critics-at-large/where-do-men-go-from-here" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Where Do Men Go from Here?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/the-art-world/august-sanders-enormous-attempt-to-capture-a-lost-world" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">August Sander’s Enormous Attempt to Capture a Lost World</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.vox.com/politics/489241/trump-corruption-weaponization-irs-violence-public-order" target="_blank" rel="noopener"
+           data-pub="Vox" style="--accent:#FFDB00">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">VOX</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">There’s more to Trump’s corruption than stealing money</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/asia/2026/05/21/indias-diplomats-are-hosting-the-world" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">India’s diplomats are hosting the world</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/in-brief/2026/05/21/the-us-in-brief-cuba-back-in-americas-sights" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The US in Brief: Cuba back in America’s sights</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/leaders/2026/05/21/spacex-is-capitalism-on-rocket-fuel" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">SpaceX is capitalism on rocket fuel</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/finance-and-economics/2026/05/21/how-should-economists-treat-morality" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">How should economists treat morality?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/finance-and-economics/2026/05/21/the-other-china-shock" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The other China shock</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/finance-and-economics/2026/05/21/the-insurers-on-the-hook-for-war-in-iran" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The insurers on the hook for war in Iran</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/leaders/2026/05/21/americas-economy-is-soaring-even-with-the-maga-tax" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">America’s economy is soaring—even with the MAGA tax</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/leaders/2026/05/21/why-nato-needs-a-plan-b" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Why NATO needs a Plan B</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/21/podcasts/colbert-snl-late-night-tv.html" target="_blank" rel="noopener"
+           data-pub="New York Times" style="--accent:#222222">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">NYT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">‘Colbert’ Is Done. ‘SNL’ is Stale. Where Does Late-Night TV Go From Here? | Cannonball</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/cathy-tie-biotech-barbie-gene-editing.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Biotech Barbie Had a Hard Year</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/john-fetterman-israel-palestine-david-safier-aipac.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">The Man Who Explains Israel to John Fetterman</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/united-states/2026/05/21/drained-by-war-with-iran-america-is-stalling-deliveries-of-arms-to-europe" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Drained by war with Iran, America is stalling deliveries of arms to Europe</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/21/brickbat-wheres-the-beef-3/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Brickbat: Where's the Beef?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/21/did-neanderthals-have-dentists" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Did Neanderthals have dentists?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/21/open-thread-211/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">Open Thread</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/20/there-is-no-equitable-constitutional-cause-of-action-to-challenge-the-presidential-record-act-policy/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">There Is No Equitable Constitutional Cause Of Action To Challenge The Presidential Record Act Policy</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/20/us-court-of-international-trade-refuses-to-stay-injunction-against-trumps-section-122-tariffs/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">US Court of International Trade Refuses to Stay Injunction Against Trump's Section 122 Tariffs</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/cartoons/blitts-kvetchbook/from-heel-to-calf" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">From Heel to Calf</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/podcast/political-scene/what-is-hakeem-jeffriess-plan-for-the-midterms-and-after" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 21</span>
+                </div>
+                <p class="tile-headline">What Is Hakeem Jeffries’s Plan for the Midterms, and After?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/volokh/2026/05/20/matt-yglesias-on-libertarianism-abundance-liberalism-and-a-possible-alliance-between-the-two/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Matt Yglesias on Libertarianism, Abundance Liberalism, and a Possible Alliance Between the Two</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/20/magazine/pardon-trump-washington.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">How to Get a Pardon in Trump’s Washington</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/can-naacps-college-sports-boycott-save-voting-rights.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Can NAACP’s College-Sports Boycott Save Voting Rights?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/harvard-will-stop-giving-a-grades-to-just-anyone.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Harvard Will Manufacture a Scarcity of A’s</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/20/justice-department-indicts-cubas-raul-castro-for-1996-shootdown-that-killed-4-americans/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Justice Department Indicts Cuba's Raúl Castro for 1996 Shootdown That Killed 4 Americans</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/business/2026/05/20/google-is-dethroning-openai-as-the-king-of-consumer-ai" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Google is dethroning OpenAI as the king of consumer AI</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/20/jeff-bezos-is-right-taxing-billionaires-wont-solve-the-affordability-crisis/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Jeff Bezos Is Right: Taxing Billionaires Won't Solve the Affordability Crisis</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/infinite-scroll/a-booming-shadow-market-of-sketchy-ai-investments" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">A Booming Shadow Market of Sketchy A.I. Investments</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/20/the-new-york-times-sues-pentagon-over-retaliatory-escort-requirement/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">The New York Times Sues Pentagon Over 'Retaliatory' Escort Requirement</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/20/how-tom-steyer-used-his-money-to-fuel-climate-hysteria/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">How Tom Steyer Used His Money To Fuel Climate Hysteria</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/books/book-currents/marie-arana-and-writing-between-reality-and-imagination" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Marie Arana and Writing Between Reality and Imagination</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/trumps-self-absorption-spells-midterms-disaster-for-the-gop.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Trump’s Self-Absorption Spells Midterms Disaster for the GOP</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/20/house-transportation-bill-eliminates-obscure-rule-that-effectively-bans-driverless-trucks/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">House Transportation Bill Eliminates Obscure Rule That Effectively Bans Driverless Trucks</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/letter-from-silicon-valley/sam-altman-won-in-court-against-elon-musk-but-really-we-all-lost" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Sam Altman Won in Court Against Elon Musk. But, Really, We All Lost</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/letter-from-the-southwest/a-republican-bloodbath-in-the-texas-senate-primary-is-giving-democrats-hope" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">A Republican Bloodbath in the Texas Senate Primary Is Giving Democrats Hope</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/jpmorgan-exec-accuser-made-eerily-similar-claims-before.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">JPMorgan Exec Alleges ‘Sex Slave’ Accuser Made ‘Eerily Similar’ Claims Before</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/trump-mobile-phone-beats-expectations-by-actually-existing.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Trump Mobile Phone Beats Expectations by Actually Existing</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/finance-and-economics/2026/05/20/economics-lessons-from-home-depot" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Economics lessons from Home Depot</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/20/a-tale-of-two-outbreaks" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">A tale of two outbreaks</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/the-americas/2026/05/20/donald-trump-is-pushing-towards-the-end-game-in-cuba" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Donald Trump is pushing towards the end-game in Cuba</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/20/britain-pressures-supermarkets-to-cap-food-prices/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Britain Pressures Supermarkets To Cap Food Prices</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/20/the-u-s-governments-shifting-excuses-for-bombing-a-school-in-iran/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">The U.S. Government's Shifting Excuses for Bombing a School in Iran</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://reason.com/2026/05/20/a-tennessee-man-jailed-for-37-days-because-of-an-anti-trump-meme-will-get-835000-for-his-trouble/" target="_blank" rel="noopener"
+           data-pub="Reason" style="--accent:#003366">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">RSN</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">A Tennessee Man Jailed for 37 Days Because of an Anti-Trump Meme Will Get $835,000 for His Trouble</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/trump-us-israel-iran-regime-change-plan-mahmoud-ahmadinejad.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Trump’s Iran Regime-Change Plan Was Even Crazier Than Anyone Imagined</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/science-and-technology/2026/05/20/breakthroughs-for-batteries-could-soon-make-them-much-better" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Breakthroughs for batteries could soon make them much better</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/science-and-technology/2026/05/20/the-hantavirus-outbreak-is-a-tragedy-and-a-valuable-data-source" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">The hantavirus outbreak is a tragedy—and a valuable data source</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/china/2026/05/20/how-china-quietly-helps-russia-in-ukraine" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">How China quietly helps Russia in Ukraine</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="http://nymag.com/intelligencer/article/whos-lining-up-for-a-cut-of-trumps-big-new-slush-fund.html?utm_source=rss&utm_medium=social_acct&utm_campaign=feed-part" target="_blank" rel="noopener"
+           data-pub="Intelligencer" style="--accent:#0057A8">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">INT</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Who’s Lining Up for a Cut of Trump’s Big New Slush Fund</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/20/magazine/partner-fired-gun-in-home-ethics.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">My Partner Fired a Gun in Our Home. Was I Wrong to Take It Away?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/cartoons/daily-cartoon/wednesday-may-20th-justice-trump-settlement" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Daily Cartoon: Wednesday, May 20th</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/best-books-2026" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">The Best Books of 2026 So Far</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/culture/2026/05/20/plot-twist-newsletter-the-art-of-royal-dressing" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Plot Twist newsletter: The art of royal dressing</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/19/magazine/sperm-racing-silicon-valley.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Silicon Valley’s Answer to Declining Male Fertility? Sperm Racing.</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/britain/2026/05/20/in-football-britain-has-a-world-beating-industry" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">In football, Britain has a world-beating industry</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/culture/2026/05/20/gamified-novels-known-as-litrpg-are-a-winning-format" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Gamified novels—known as LitRPG—are a winning format</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/humor/shouts-murmurs/relics-of-the-not-so-distant-past" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Relics of the Not So Distant Past</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/20/bibi-one-more-time-israels-election-launches" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Bibi, one more time? Israel’s election launches</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/books/under-review/why-the-best-writing-advice-is-often-the-weirdest" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Why the Best Writing Advice Is Often the Weirdest</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/the-theatre/the-redemption-of-vanessa-a-neglected-operatic-masterpiece" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">The Redemption of “Vanessa,” a Neglected Operatic Masterpiece</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/in-brief/2026/05/20/the-us-in-brief-trump-gets-more-revenge" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">The US in Brief: Trump gets more revenge</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/20/a-looming-eu-china-trade-war" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">A looming EU-China trade war</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/press-room/the-new-yorker-wins-a-2026-national-magazine-award" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">The New Yorker’s Ava Kofman Wins a 2026 National Magazine Award</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/election-2026/kentucky-primary-elections-map-live-results" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 20</span>
+                </div>
+                <p class="tile-headline">Kentucky Primary-Election Results: Thomas Massie Loses</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/international/2026/05/19/israel-the-lonely" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Israel the lonely</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/14/magazine/dumb-phones-tvs-retronym-smart-tech.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Why ‘Smart’ Products Have Started to Look Like the Dumb Choice</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/business/2026/05/19/chanels-creative-revival-is-paying-off" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Chanel’s creative revival is paying off</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/finance-and-economics/2026/05/19/investors-fear-another-surge-in-inflation" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Investors fear another surge in inflation</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/middle-east-and-africa/2026/05/19/a-new-ebola-outbreak-could-be-the-worst-in-a-decade" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">A new Ebola outbreak could be the worst in a decade</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/europe/2026/05/19/europes-secret-plan-b-to-replace-nato" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Europe’s secret Plan B to replace NATO</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/pop-music/drake-would-like-to-settle-the-score" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Drake Would Like to Settle the Score</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/cartoons/daily-cartoon/tuesday-may-19th-knicks-playoffs" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Daily Cartoon: Tuesday, May 19th</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/middle-east-and-africa/2026/05/19/middle-east-dispatch-what-binyamin-netanyahus-opponents-wont-say" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Middle East Dispatch: What Binyamin Netanyahu’s opponents won’t say</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/q-and-a/the-gaza-peace-plan-has-gone-nowhere" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">The Gaza Peace Plan Has Gone Nowhere</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/britain/2026/05/19/blighty-newsletter-who-goes-to-a-tommy-robinson-rally" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Blighty newsletter: Who goes to a Tommy Robinson rally?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/19/what-did-trump-and-xi-agree-on" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">What did Trump and Xi agree on?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/united-states/2026/05/19/michigans-senate-primary-is-a-fight-over-the-future-of-the-democratic-party" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Michigan’s Senate primary is a fight over the future of the Democratic Party</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/science-and-technology/2026/05/19/japanese-eels-have-two-types-of-sperm" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Japanese eels have two types of sperm</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/19/spread-too-thin-africas-next-ebola-outbreak" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Spread too thin: Africa’s next Ebola outbreak</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/georgia-primary-elections-map-live-results" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Georgia Primary-Elections Map: Live Results</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/humor/shouts-murmurs/if-people-talked-about-other-technologies-the-way-they-talk-about-ai" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">If People Talked About Other Technologies the Way They Talk About A.I.</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/fault-lines/the-enrollment-cliff-is-here-which-schools-will-survive-it" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">The Enrollment Cliff Is Here. Which Schools Will Survive It?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/by-invitation/2026/05/19/turkeys-struggle-for-democracy-is-like-hungarys-but-harder" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Turkey’s struggle for democracy is like Hungary’s, but harder</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/in-brief/2026/05/19/the-us-in-brief-friends-with-benefits" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">The US in Brief: Friends with benefits</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/united-states/2026/05/19/even-by-trumpian-standards-a-18bn-fund-for-friends-is-bad" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Even by Trumpian standards, a $1.8bn fund for friends is bad</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/19/magazine/man-thinketh-book.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">Do You Even Thinketh, Bro?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/19/how-the-energy-shock-is-changing-asia" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 19</span>
+                </div>
+                <p class="tile-headline">How the energy shock is changing Asia</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/the-lede/what-thomas-massies-race-says-about-trumps-influence" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">What Thomas Massie’s Race Says About Trump’s Influence</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/europe/2026/05/18/who-are-europes-newest-troublemakers" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Who are Europe’s newest troublemakers?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/finance-and-economics/2026/05/18/where-expat-escapees-from-dubai-end-up" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Where expat escapees from Dubai end up</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/16/magazine/graham-platner-interview.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Graham Platner Thinks a Political Revolution Is Coming</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/news/the-lede/benjamin-netanyahus-war-at-home" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Benjamin Netanyahu’s War at Home</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/finance-and-economics/2026/05/18/how-much-is-donald-trump-costing-americas-economy" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">How much is Donald Trump costing America’s economy?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/graphic-detail/2026/05/18/fifas-exorbitant-world-cup-tickets-could-backfire" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">FIFA’s exorbitant World Cup tickets could backfire</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/culture/the-current-cinema/all-of-a-sudden-the-glories-of-cannes-are-upon-us" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">All of a Sudden, the Glories of Cannes Are Upon Us</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/middle-east-and-africa/2026/05/18/the-war-room-newsletter-why-the-iran-conflict-may-reignite" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">The War Room newsletter: Why the Iran conflict may reignite</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/china/2026/05/18/vladimir-putins-turn-with-xi-jinping" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Vladimir Putin’s turn with Xi Jinping</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/cartoons/daily-cartoon/monday-may-18th-presidents-approval-rating" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Daily Cartoon: Monday, May 18th</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/by-invitation/2026/05/18/how-to-minimise-the-cost-of-a-falling-population" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">How to minimise the cost of a falling population</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/18/equal-before-the-law-transitional-justice-in-syria" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Equal before the law? Transitional justice in Syria</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/in-brief/2026/05/18/the-us-in-brief-cassidy-gets-trumped" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">The US in Brief: Cassidy gets Trumped</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/the-prehistory-of-ai-slop" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">The Prehistory of A.I. Slop</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/can-mozart-and-salieri-work-it-out" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Can Mozart and Salieri Work It Out?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/the-age-of-intentional-drinking" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">The Age of “Intentional” Drinking</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/can-hakeem-jeffries-lead-a-democratic-takeover-of-the-house" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Can Hakeem Jeffries Lead a Democratic Takeover of the House?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/realistic-high-school-yearbook-inscriptions" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Realistic High-School-Yearbook Inscriptions</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/into-the-wood-chipper-transcendence-for-beginners-paradiso-17-the-monuments-of-paris" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Briefly Noted Book Reviews</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/shaggys-boombastic-pilates-session" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Shaggy’s Boombastic Pilates Session</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/chaya-czernowin-gives-voice-to-a-wounded-world" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Chaya Czernowin Gives Voice to a Wounded World</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/the-mystery-and-mass-appeal-of-the-nfl-draft" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">The Mystery and Mass Appeal of the N.F.L. Draft</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/an-inconvenient-widow-lois-romano-book-review" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Mary Todd Lincoln Has Long Been Derided. Is Her Reputation Salvageable?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/the-angel-of-retail-robert-pinsky-poem" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">“The Angel of Retail,” by Robert Pinsky</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.newyorker.com/magazine/2026/05/25/for-against-summer-a-spell-valzhyna-mort-poem" target="_blank" rel="noopener"
+           data-pub="The New Yorker" style="--accent:#D4001A">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">TNY</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">For/Against Summer, a Spell</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/asia/2026/05/18/is-donald-trump-selling-out-taiwan" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Is Donald Trump selling out Taiwan?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/18/preparing-for-the-ai-jobs-apocalypse" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 18</span>
+                </div>
+                <p class="tile-headline">Preparing for the AI jobs apocalypse</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/middle-east-and-africa/2026/05/17/is-binyamin-netanyahu-facing-his-last-stand" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 17</span>
+                </div>
+                <p class="tile-headline">Is Binyamin Netanyahu facing his last stand?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/business/2026/05/17/ai-super-apps-are-remaking-chinas-internet" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 17</span>
+                </div>
+                <p class="tile-headline">AI super-apps are remaking China’s internet</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/09/magazine/ramit-sethi-interview.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 17</span>
+                </div>
+                <p class="tile-headline">A Personal Finance Star on What Millennials Need From Their Boomer Parents</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/16/magazine/living-in-storage-unit-ethics.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 17</span>
+                </div>
+                <p class="tile-headline">I Think Someone Is Living in the Storage Unit Next to Mine. What Should I Do?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/graphic-detail/2026/05/17/russia-is-starting-to-lose-ground-in-ukraine" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 17</span>
+                </div>
+                <p class="tile-headline">Russia is starting to lose ground in Ukraine</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/britain/2026/05/17/the-battle-to-lead-labour-and-britain-hangs-on-a-by-election" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 17</span>
+                </div>
+                <p class="tile-headline">The battle to lead Labour—and Britain—hangs on a by-election</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/asia/2026/05/17/indias-loudest-political-fight-obscures-a-more-urgent-one" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 17</span>
+                </div>
+                <p class="tile-headline">India’s loudest political fight obscures a more urgent one</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/united-states/2026/05/16/checks-and-balance-newsletter-a-fix-for-donald-trumps-jobs-problem" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 16</span>
+                </div>
+                <p class="tile-headline">Checks and Balance newsletter: A fix for Donald Trump’s jobs problem</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/culture/2026/05/16/plot-twist-newsletter-this-self-help-book-has-hit-the-zeitgeist" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 16</span>
+                </div>
+                <p class="tile-headline">Plot Twist newsletter: This self-help book has hit the zeitgeist</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/the-world-this-week/2026/05/16/cover-story-newsletter-the-jobs-apocalypse" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 16</span>
+                </div>
+                <p class="tile-headline">Cover Story newsletter: The jobs apocalypse</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/podcasts/2026/05/16/the-curious-case-of-the-missing-milk-supply" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 16</span>
+                </div>
+                <p class="tile-headline">The Curious Case of the Missing Milk Supply</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.economist.com/interactive/2025-british-politics/leadership-contest" target="_blank" rel="noopener"
+           data-pub="The Economist" style="--accent:#E3120B">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">ECO</span>
+                    <span class="tile-date">May 15</span>
+                </div>
+                <p class="tile-headline">Who is leading the race to replace Sir Keir Starmer?</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a>
+        <a class="tile" href="https://www.nytimes.com/2026/05/12/magazine/testosterone-masculinity-trump-rfk.html" target="_blank" rel="noopener"
+           data-pub="NYT Magazine" style="--accent:#FF3A2F">
+            <div class="tile-inner">
+                <div class="tile-top">
+                    <span class="tile-abbr">MAG</span>
+                    <span class="tile-date">May 15</span>
+                </div>
+                <p class="tile-headline">Why So Many Guys Are Obsessed With Testosterone</p>
+                <div class="tile-bar"></div>
+            </div>
+        </a></div>
+    <script>
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const pub = btn.dataset.pub;
+                document.getElementById('search').value = '';
+                document.querySelectorAll('.tile').forEach(tile => {
+                    tile.classList.toggle('hidden', pub !== 'all' && tile.dataset.pub !== pub);
+                });
+            });
+        });
+        document.getElementById('search').addEventListener('input', function() {
+            const q = this.value.toLowerCase().trim();
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.filter-btn[data-pub="all"]').classList.add('active');
+            document.querySelectorAll('.tile').forEach(tile => {
+                tile.classList.toggle('hidden', q ? !tile.textContent.toLowerCase().includes(q) : false);
+            });
+        });
+    </script>
 </body>
 </html>
